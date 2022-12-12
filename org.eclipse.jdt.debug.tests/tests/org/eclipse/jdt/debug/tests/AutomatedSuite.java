@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2021 IBM Corporation and others.
+ * Copyright (c) 2000, 2022 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -153,6 +153,7 @@ import org.eclipse.jdt.debug.tests.variables.TestIntegerAccessUnboxing15;
 import org.eclipse.jdt.debug.tests.variables.TestLogicalStructures;
 import org.eclipse.jdt.debug.tests.variables.TestLogicalStructuresJava9;
 
+import junit.framework.JUnit4TestAdapter;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
@@ -332,7 +333,7 @@ public class AutomatedSuite extends DebugSuite {
 		addTest(new TestSuite(ModelPresentationTests.class));
 
 	// Open from Clipboard action tests - Need to use #suite() because the test has a custom setup
-		addTest(OpenFromClipboardTests.suite());
+		addTest(new JUnit4TestAdapter(OpenFromClipboardTests.class));
 
 	//add the complete eval suite
 		addTest(new TestSuite(GeneralEvalTests.class));
@@ -343,7 +344,7 @@ public class AutomatedSuite extends DebugSuite {
 			addTest(new TestSuite(LambdaVariableTest.class));
 		}
 		//addTest(EvalTestSuite.suite());
-		if (JavaProjectHelper.isJava9Compatible()) {
+		if (JavaProjectHelper.isJava9Compatible() && !JavaProjectHelper.isJava19_Compatible()) {
 			addTest(new TestSuite(Java9Tests.class));
 		}
 

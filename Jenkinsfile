@@ -18,7 +18,7 @@ pipeline {
 				wrap([$class: 'Xvnc', useXauthority: true]) {
 					sh """
 					mvn clean verify --batch-mode --fail-at-end -Dmaven.repo.local=$WORKSPACE/.m2/repository \
-						-Pbuild-individual-bundles -Pbree-libs -Papi-check \
+						-Pbuild-individual-bundles -Ptest-on-javase-19 -Pbree-libs -Papi-check\
 						-Dcompare-version-with-baselines.skip=false \
 						-Dproject.build.sourceEncoding=UTF-8 \
 						-DtrimStackTrace=false
@@ -28,7 +28,6 @@ pipeline {
 			post {
 				always {
 					archiveArtifacts artifacts: '*.log,*/target/work/data/.metadata/*.log,*/tests/target/work/data/.metadata/*.log,apiAnalyzer-workspace/.metadata/*.log', allowEmptyArchive: true
-					recordIssues aggregatingResults: true, enabledForFailure: true, qualityGates: [[threshold: 1, type: 'DELTA', unstable: false]], tools: [acuCobol()]
 					publishIssues issues:[scanForIssues(tool: java()), scanForIssues(tool: mavenConsole())]
 					junit '**/target/surefire-reports/*.xml'
 				}

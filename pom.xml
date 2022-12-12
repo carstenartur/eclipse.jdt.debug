@@ -15,7 +15,7 @@
   <parent>
     <groupId>org.eclipse</groupId>
     <artifactId>eclipse-platform-parent</artifactId>
-    <version>4.25.0-SNAPSHOT</version>
+    <version>4.27.0-SNAPSHOT</version>
     <relativePath>../eclipse-platform-parent</relativePath>
   </parent>
 
@@ -58,5 +58,6 @@
     <module>org.eclipse.jdt.launching.ui.macosx</module>
     <module>org.eclipse.jdt.debug.tests</module>
     <module>org.eclipse.jdt.debug.ui</module>
+    <module>org.eclipse.jdt.debug.jdi.tests</module>
   </modules>
 </project>

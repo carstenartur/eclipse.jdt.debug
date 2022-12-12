@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2022 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -413,17 +413,16 @@ public class JDIStackFrame extends JDIDebugElement implements IJavaStackFrame {
 			if (type == null) {
 				return;
 			}
-			ASTParser parser = ASTParser.newParser(AST.JLS11);
+			ASTParser parser = ASTParser.newParser(AST.getJLSLatest());
 			parser.setResolveBindings(true);
 			parser.setSource(type.getTypeRoot());
-			CompilationUnit cu = (CompilationUnit) parser.createAST(null);
-			List<Location> allLineLocations;
 			try {
-				allLineLocations = getUnderlyingMethod().allLineLocations();
+				CompilationUnit cu = (CompilationUnit) parser.createAST(null);
+				List<Location> allLineLocations = getUnderlyingMethod().allLineLocations();
 				int lineNo = allLineLocations.get(0).lineNumber();
 				cu.accept(new LambdaASTVisitor(false, underlyingThisObject, getUnderlyingMethod().isStatic(), cu, lineNo));
-			} catch (AbsentInformationException e) {
-				// Nothing to be done
+			} catch (AbsentInformationException | IllegalStateException e) {
+				// Nothing to be done - either no source or no line numbers
 			}
 		} catch (CoreException e) {
 			logError(e);
@@ -1575,6 +1574,7 @@ public class JDIStackFrame extends JDIDebugElement implements IJavaStackFrame {
 	/**
 	 * @see org.eclipse.debug.core.model.IFilteredStep#stepWithFilters()
 	 */
+	@SuppressWarnings("deprecation")
 	@Override
 	public void stepWithFilters() throws DebugException {
 		((IJavaThread) getThread()).stepWithFilters();
