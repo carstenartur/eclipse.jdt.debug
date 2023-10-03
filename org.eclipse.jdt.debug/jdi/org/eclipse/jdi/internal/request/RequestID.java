@@ -28,7 +28,7 @@ public class RequestID {
 	public static final RequestID nullID = new RequestID(NULL_REQUEST_ID);
 
 	/** Integer representation of request ID. */
-	private int fRequestID;
+	private final int fRequestID;
 
 	/**
 	 * Creates new request ID.
@@ -69,7 +69,7 @@ public class RequestID {
 	 */
 	@Override
 	public String toString() {
-		return Long.valueOf(fRequestID).toString();
+		return Long.toString(fRequestID);
 	}
 
 	/**

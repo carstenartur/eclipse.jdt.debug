@@ -93,10 +93,10 @@ public class JavaLogicalStructure implements ILogicalStructureType, ILogicalStru
 	 */
 	private class EvaluationBlock implements IEvaluationListener {
 
-		private IJavaObject fEvaluationValue;
-		private IJavaReferenceType fEvaluationType;
-		private IJavaThread fThread;
-		private IAstEvaluationEngine fEvaluationEngine;
+		private final IJavaObject fEvaluationValue;
+		private final IJavaReferenceType fEvaluationType;
+		private final IJavaThread fThread;
+		private final IAstEvaluationEngine fEvaluationEngine;
 		private IEvaluationResult fResult;
 
 		/**
@@ -141,7 +141,7 @@ public class JavaLogicalStructure implements ILogicalStructureType, ILogicalStru
 		 */
 		public IJavaValue evaluate(String snippet) throws DebugException {
 			Map<String, String> compileOptions =
-					Collections.singletonMap(CompilerOptions.OPTION_JdtDebugCompileMode, JavaCore.ENABLED);
+					Collections.singletonMap(CompilerOptions.OPTION_IgnoreUnnamedModuleForSplitPackage, JavaCore.ENABLED);
 			ICompiledExpression compiledExpression = fEvaluationEngine
 					.getCompiledExpression(snippet, fEvaluationType, compileOptions);
 			if (compiledExpression.hasErrors()) {

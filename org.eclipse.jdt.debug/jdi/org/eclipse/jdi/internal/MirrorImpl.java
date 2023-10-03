@@ -18,7 +18,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 
 import org.eclipse.jdi.Bootstrap;
@@ -50,7 +50,7 @@ public class MirrorImpl implements Mirror {
 	/** Description of Mirror object. */
 	protected String fDescription;
 	/** Virtual Machine of Mirror object. */
-	private VirtualMachineImpl fVirtualMachineImpl;
+	private final VirtualMachineImpl fVirtualMachineImpl;
 	/**
 	 * VerboseWriter where verbose info is written to, null if no verbose must
 	 * be given.
@@ -209,7 +209,7 @@ public class MirrorImpl implements Mirror {
 		long recieved = System.currentTimeMillis();
 		if (JDIDebugOptions.DEBUG_JDI_REQUEST_TIMES) {
 			StringBuilder buf = new StringBuilder();
-			buf.append(JDIDebugOptions.FORMAT.format(new Date(sent)));
+			buf.append(JDIDebugOptions.FORMAT.format(Instant.ofEpochMilli(sent)));
 			buf.append(" JDI Request: "); //$NON-NLS-1$
 			buf.append(commandPacket.toString());
 			buf.append("\n\tResponse Time: "); //$NON-NLS-1$

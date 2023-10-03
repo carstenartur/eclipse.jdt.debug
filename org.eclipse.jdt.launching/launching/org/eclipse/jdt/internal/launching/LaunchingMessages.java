@@ -46,8 +46,6 @@ public class LaunchingMessages extends NLS {
 	public static String EEVMType_5;
 	public static String EEVMType_6;
 
-	public static String ExecutionEnvironmentDescription_0;
-
 	public static String ExecutionEnvironmentDescription_1;
 
 	public static String JavaLocalApplicationLaunchConfigurationDelegate_Verifying_launch_attributes____1;
@@ -248,5 +246,9 @@ public class LaunchingMessages extends NLS {
 	public static String RunnerBootpathError;
 
 	public static String RunnerBootpathPError;
+
+	public static String lookupInstalledJVMs;
+
+	public static String configuringJVM;
 
 }

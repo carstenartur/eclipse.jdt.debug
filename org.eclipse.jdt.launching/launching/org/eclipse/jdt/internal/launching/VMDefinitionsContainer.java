@@ -31,7 +31,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.eclipse.core.runtime.CoreException;
@@ -79,17 +78,17 @@ public class VMDefinitionsContainer {
 	/**
 	 * Map of VMInstallTypes to Lists of corresponding VMInstalls.
 	 */
-	private Map<IVMInstallType, List<IVMInstall>> fVMTypeToVMMap;
+	private final Map<IVMInstallType, List<IVMInstall>> fVMTypeToVMMap;
 
 	/**
 	 * Cached list of VMs in this container
 	 */
-	private List<IVMInstall> fVMList;
+	private final List<IVMInstall> fVMList;
 
 	/**
 	 * VMs managed by this container whose install locations don't actually exist.
 	 */
-	private List<IVMInstall> fInvalidVMList;
+	private final List<IVMInstall> fInvalidVMList;
 
 	/**
 	 * The composite identifier of the default VM.  This consists of the install type ID
@@ -446,7 +445,7 @@ public class VMDefinitionsContainer {
 		Element config= null;
 		// Wrapper the stream for efficient parsing
 		try (InputStream stream = new BufferedInputStream(inputStream)) {
-			DocumentBuilder parser= DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			DocumentBuilder parser = XmlProcessorFactoryJdtDebug.createDocumentBuilderWithErrorOnDOCTYPE();
 			parser.setErrorHandler(new DefaultHandler());
 			config = parser.parse(new InputSource(stream)).getDocumentElement();
 		} catch (SAXException e) {

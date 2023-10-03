@@ -96,7 +96,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	/**
 	 * Underlying source locator.
 	 */
-	private JavaSourceLocator fSourceLocator;
+	private final JavaSourceLocator fSourceLocator;
 
 	/**
 	 * Whether the user should be prompted for source.
@@ -284,7 +284,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	public String getMemento() throws CoreException {
 		String memento = fSourceLocator.getMemento();
 		String handle = fJavaProject.getHandleIdentifier();
-		String findAll = Boolean.valueOf(isFindAllSourceElements()).toString();
+		String findAll = Boolean.toString(isFindAllSourceElements());
 
 		StringBuilder buffer = new StringBuilder();
 		buffer.append("<project>"); //$NON-NLS-1$

@@ -84,13 +84,13 @@ public class JavaConnectTab extends AbstractJavaMainTab implements IPropertyChan
 	// UI widgets
 	private Button fAllowTerminateButton;
 	private Map<String, Connector.Argument> fArgumentMap;
-	private Map<String, FieldEditor> fFieldEditorMap = new HashMap<>();
+	private final Map<String, FieldEditor> fFieldEditorMap = new HashMap<>();
 	private Composite fArgumentComposite;
 	private Combo fConnectorCombo;
 
 	// the selected connector
 	private IVMConnector fConnector;
-	private IVMConnector[] fConnectors = JavaRuntime.getVMConnectors();
+	private final IVMConnector[] fConnectors = JavaRuntime.getVMConnectors();
 
 	/* (non-Javadoc)
 	 * @see org.eclipse.debug.ui.ILaunchConfigurationTab#createControl(org.eclipse.swt.widgets.Composite)
@@ -284,10 +284,10 @@ public class JavaConnectTab extends AbstractJavaMainTab implements IPropertyChan
 				attrMap.put(key, editor.getPreferenceStore().getString(key));
 			}
 			else if (arg instanceof Connector.BooleanArgument) {
-				attrMap.put(key, Boolean.valueOf(editor.getPreferenceStore().getBoolean(key)).toString());
+				attrMap.put(key, Boolean.toString(editor.getPreferenceStore().getBoolean(key)));
 			}
 			else if (arg instanceof Connector.IntegerArgument) {
-				attrMap.put(key, Integer.valueOf(editor.getPreferenceStore().getInt(key)).toString());
+				attrMap.put(key, Integer.toString(editor.getPreferenceStore().getInt(key)));
 			}
 		}
 		config.setAttribute(IJavaLaunchConfigurationConstants.ATTR_CONNECT_MAP, attrMap);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2015 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -103,7 +104,7 @@ public abstract class ReferenceTypeImpl extends TypeImpl implements
 		 * the output source file, range in the output source file]. (Integer ->
 		 * List of int[2]).
 		 */
-		private HashMap<Integer, List<int[]>> fLineInfo;
+		private final HashMap<Integer, List<int[]>> fLineInfo;
 
 		/**
 		 * FileInfo constructor.
@@ -193,12 +194,12 @@ public abstract class ReferenceTypeImpl extends TypeImpl implements
 		/**
 		 * The id of this stratum.
 		 */
-		private String fId;
+		private final String fId;
 
 		/**
 		 * The file info data associated to this stratum.
 		 */
-		private List<FileInfo> fFileInfos;
+		private final List<FileInfo> fFileInfos;
 
 		/**
 		 * Id of the primary file for this stratum.
@@ -209,7 +210,7 @@ public abstract class ReferenceTypeImpl extends TypeImpl implements
 		 * Map line number in the output source file -> list of line numbers in
 		 * the input source file. (Integer -> List of Integer)
 		 */
-		private HashMap<Integer, List<int[]>> fOutputLineToInputLine;
+		private final HashMap<Integer, List<int[]>> fOutputLineToInputLine;
 
 		/**
 		 * Stratum constructor.
@@ -350,7 +351,7 @@ public abstract class ReferenceTypeImpl extends TypeImpl implements
 	}
 
 	/** ReferenceTypeID that corresponds to this reference. */
-	private JdwpReferenceTypeID fReferenceTypeID;
+	private final JdwpReferenceTypeID fReferenceTypeID;
 
 	/** The following are the stored results of JDWP calls. */
 	protected List<InterfaceType> fInterfaces = null;
@@ -2066,7 +2067,7 @@ public abstract class ReferenceTypeImpl extends TypeImpl implements
 					List<int[]> lineInfos = stratum.getInputLineInfos(javaStratumLineNumberTable[i]);
 					if (lineInfos != null) {
 						int[] lineInfo = lineInfos.get(0);
-						if (!lineInfo.equals(lineInfoTable[lastIndex])) {
+						if (!Arrays.equals(lineInfo, lineInfoTable[lastIndex])) {
 							lineInfoTable[i] = lineInfo;
 							lastIndex = i;
 						}
@@ -2084,7 +2085,7 @@ public abstract class ReferenceTypeImpl extends TypeImpl implements
 					if (lineInfos != null) {
 						for (int[] lineInfo : lineInfos) {
 							if (lineInfo[0] == fileId) {
-								if (!lineInfo.equals(lineInfoTable[lastIndex])) {
+								if (!Arrays.equals(lineInfo, lineInfoTable[lastIndex])) {
 									lineInfoTable[i] = lineInfo;
 									lastIndex = i;
 								}

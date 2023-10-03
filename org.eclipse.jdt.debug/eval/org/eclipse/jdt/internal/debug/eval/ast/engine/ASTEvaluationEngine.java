@@ -15,10 +15,10 @@
  *******************************************************************************/
 package org.eclipse.jdt.internal.debug.eval.ast.engine;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -188,7 +188,7 @@ public class ASTEvaluationEngine implements IAstEvaluationEngine {
 	private void traceCaller(String snippet, IThread thread) {
 		if (JDIDebugOptions.DEBUG_AST_EVAL_THREAD_TRACE) {
 			StringBuilder buf = new StringBuilder();
-			buf.append(JDIDebugOptions.FORMAT.format(new Date()));
+			buf.append(JDIDebugOptions.FORMAT.format(Instant.now()));
 			buf.append(" : Evaluation Request Trace - Expression: "); //$NON-NLS-1$
 			buf.append(snippet);
 			buf.append("\n\tThread: "); //$NON-NLS-1$
@@ -390,7 +390,7 @@ public class ASTEvaluationEngine implements IAstEvaluationEngine {
 			Map<String, String> extraOptions = Collections.emptyMap();
 			// if target runtime is above java 1.8 then switch the compiler to debug mode to ignore java 9 module system
 			if (JavaCore.compareJavaVersions(((IJavaDebugTarget) frame.getDebugTarget()).getVersion(), JavaCore.VERSION_1_8) > 0) {
-				extraOptions = Collections.singletonMap(CompilerOptions.OPTION_JdtDebugCompileMode, JavaCore.ENABLED);
+				extraOptions = Collections.singletonMap(CompilerOptions.OPTION_IgnoreUnnamedModuleForSplitPackage, JavaCore.ENABLED);
 			}
 
 			unit = parseCompilationUnit(
@@ -750,19 +750,19 @@ public class ASTEvaluationEngine implements IAstEvaluationEngine {
 
 	class EvalRunnable implements Runnable {
 
-		private InstructionSequence fExpression;
+		private final InstructionSequence fExpression;
 
-		private IJavaThread fThread;
+		private final IJavaThread fThread;
 
-		private int fEvaluationDetail;
+		private final int fEvaluationDetail;
 
-		private boolean fHitBreakpoints;
+		private final boolean fHitBreakpoints;
 
-		private IRuntimeContext fContext;
+		private final IRuntimeContext fContext;
 
-		private IEvaluationListener fListener;
+		private final IEvaluationListener fListener;
 
-		private boolean fDisableGcOnResult;
+		private final boolean fDisableGcOnResult;
 
 		public EvalRunnable(InstructionSequence expression, IJavaThread thread,
 				IRuntimeContext context, IEvaluationListener listener,
@@ -780,7 +780,7 @@ public class ASTEvaluationEngine implements IAstEvaluationEngine {
 		public void run() {
 			if (JDIDebugOptions.DEBUG_AST_EVAL) {
 				StringBuilder buf = new StringBuilder();
-				buf.append(JDIDebugOptions.FORMAT.format(new Date()));
+				buf.append(JDIDebugOptions.FORMAT.format(Instant.now()));
 				buf.append(" : AST Evaluation"); //$NON-NLS-1$
 				buf.append("\n\tExpression: "); //$NON-NLS-1$
 				buf.append(fExpression.getSnippet());
