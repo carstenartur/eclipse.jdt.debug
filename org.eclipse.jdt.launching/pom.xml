@@ -14,11 +14,11 @@
   <parent>
     <artifactId>eclipse.jdt.debug</artifactId>
     <groupId>eclipse.jdt.debug</groupId>
-    <version>4.29.0-SNAPSHOT</version>
+    <version>4.30.0-SNAPSHOT</version>
   </parent>
   <groupId>org.eclipse.jdt</groupId>
   <artifactId>org.eclipse.jdt.launching</artifactId>
-  <version>3.20.100-SNAPSHOT</version>
+  <version>3.21.0-SNAPSHOT</version>
   <packaging>eclipse-plugin</packaging>
   
   <build>
@@ -51,11 +51,6 @@
           <plugin>
              <groupId>org.eclipse.tycho</groupId>
              <artifactId>tycho-surefire-plugin</artifactId>
-             <configuration>
-               <systemProperties>
-                 <DetectVMInstallationsJob.disabled>true</DetectVMInstallationsJob.disabled>
-               </systemProperties>
-             </configuration>
           </plugin>
         </plugins>
       </build>

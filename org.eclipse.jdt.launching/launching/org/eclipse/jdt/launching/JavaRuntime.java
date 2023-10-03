@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -79,6 +80,7 @@ import org.eclipse.jdt.internal.core.JavaProject;
 import org.eclipse.jdt.internal.launching.CompositeId;
 import org.eclipse.jdt.internal.launching.DefaultEntryResolver;
 import org.eclipse.jdt.internal.launching.DefaultProjectClasspathEntry;
+import org.eclipse.jdt.internal.launching.DetectVMInstallationsJob;
 import org.eclipse.jdt.internal.launching.EEVMInstall;
 import org.eclipse.jdt.internal.launching.EEVMType;
 import org.eclipse.jdt.internal.launching.JREContainerInitializer;
@@ -328,7 +330,7 @@ public final class JavaRuntime {
 	public static final String CLASSPATH_ATTR_LIBRARY_PATH_ENTRY =  LaunchingPlugin.getUniqueIdentifier() + ".CLASSPATH_ATTR_LIBRARY_PATH_ENTRY"; //$NON-NLS-1$
 
 	// lock for VM initialization
-	private static Object fgVMLock = new Object();
+	private static final Object fgVMLock = new Object();
 	private static boolean fgInitializingVMs = false;
 
 	private static HashSet<Object> fgVMTypes = null;
@@ -351,26 +353,26 @@ public final class JavaRuntime {
 	/**
 	 * Default classpath and source path providers.
 	 */
-	private static IRuntimeClasspathProvider fgDefaultClasspathProvider = new StandardClasspathProvider();
-	private static IRuntimeClasspathProvider fgDefaultSourcePathProvider = new StandardSourcePathProvider();
+	private static final IRuntimeClasspathProvider fgDefaultClasspathProvider = new StandardClasspathProvider();
+	private static final IRuntimeClasspathProvider fgDefaultSourcePathProvider = new StandardSourcePathProvider();
 
 	/**
 	 * VM change listeners
 	 */
-	private static ListenerList<IVMInstallChangedListener> fgVMListeners = new ListenerList<>();
+	private static final ListenerList<IVMInstallChangedListener> fgVMListeners = new ListenerList<>();
 
 	/**
 	 * Cache of already resolved projects in container entries. Used to avoid
 	 * cycles in project dependencies when resolving classpath container entries.
 	 * Counters used to know when entering/exiting to clear cache
 	 */
-	private static ThreadLocal<List<IJavaProject>> fgProjects = new ThreadLocal<>(); // Lists
-	private static ThreadLocal<Integer> fgEntryCount = new ThreadLocal<>(); // Integers
+	private static final ThreadLocal<List<IJavaProject>> fgProjects = new ThreadLocal<>(); // Lists
+	private static final ThreadLocal<Integer> fgEntryCount = new ThreadLocal<>(); // Integers
 
     /**
      *  Set of IDs of VMs contributed via vmInstalls extension point.
      */
-    private static Set<String> fgContributedVMs = new HashSet<>();
+	private static final Set<String> fgContributedVMs = ConcurrentHashMap.newKeySet();
 
 	/**
 	 * This class contains only static methods, and is not intended
@@ -3268,8 +3270,7 @@ public final class JavaRuntime {
 							VMStandin vmStandin = (VMStandin) vmListIterator.next();
 							vmStandin.convertToRealVM();
 						}
-
-
+						DetectVMInstallationsJob.initialize();
 					} catch (IOException e) {
 						LaunchingPlugin.log(e);
 					}
@@ -3362,8 +3363,11 @@ public final class JavaRuntime {
 				} else if (javaVersion.startsWith(JavaCore.VERSION_20)
 						&& (javaVersion.length() == JavaCore.VERSION_20.length() || javaVersion.charAt(JavaCore.VERSION_20.length()) == '.')) {
 					compliance = JavaCore.VERSION_20;
+				} else if (javaVersion.startsWith(JavaCore.VERSION_21)
+						&& (javaVersion.length() == JavaCore.VERSION_21.length() || javaVersion.charAt(JavaCore.VERSION_21.length()) == '.')) {
+					compliance = JavaCore.VERSION_21;
 				} else {
-					compliance = JavaCore.VERSION_20; // use latest by default
+					compliance = JavaCore.VERSION_21; // use latest by default
 				}
 
             	Hashtable<String, String> options= JavaCore.getOptions();
@@ -3427,7 +3431,7 @@ public final class JavaRuntime {
 			standin.setInstallLocation(new File(home));
 			standin.setLibraryLocations(description.getLibraryLocations());
 			standin.setVMArgs(description.getVMArguments());
-			standin.setJavadocLocation(EEVMType.getJavadocLocation(description.getProperties()));
+			standin.setJavadocLocation(EEVMType.getJavadocLocation(description));
 			standin.setAttribute(EEVMInstall.ATTR_EXECUTION_ENVIRONMENT_ID, description.getProperty(ExecutionEnvironmentDescription.CLASS_LIB_LEVEL));
 			File exe = description.getExecutable();
 			if (exe == null) {

@@ -12,20 +12,26 @@ package org.eclipse.jdt.internal.launching;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.preferences.DefaultScope;
+import org.eclipse.core.runtime.preferences.IEclipsePreferences;
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jdt.launching.IVMInstall2;
 import org.eclipse.jdt.launching.IVMInstallType;
@@ -37,26 +43,37 @@ import org.eclipse.jdt.launching.VMStandin;
  * are not yet known by JDT to the VM registry (usually visible in the "Installed JREs"
  * preference page)
  */
-class DetectVMInstallationsJob extends Job {
+public class DetectVMInstallationsJob extends Job {
 
 	private static final Object FAMILY = DetectVMInstallationsJob.class;
 
-	private final StandardVMType standardType;
-	
-	DetectVMInstallationsJob() {
+	private DetectVMInstallationsJob() {
 		super(LaunchingMessages.lookupInstalledJVMs);
-		this.standardType = (StandardVMType)JavaRuntime.getVMInstallType(StandardVMType.ID_STANDARD_VM_TYPE);
 	}
 
 	@Override
 	protected IStatus run(IProgressMonitor monitor) {
-		Collection<File> candidates = computeCandidateVMs();
+		StandardVMType standardType = (StandardVMType) JavaRuntime.getVMInstallType(StandardVMType.ID_STANDARD_VM_TYPE);
+		Collection<File> candidates = computeCandidateVMs(standardType);
 		if (monitor.isCanceled()) {
 			return Status.CANCEL_STATUS;
 		}
 		Set<File> knownVMs = knownVMs();
 		candidates.removeIf(knownVMs::contains);
-		monitor.beginTask(LaunchingMessages.lookupInstalledJVMs, candidates.size());
+		Collection<VMStandin> systemVMs = Collections.EMPTY_LIST;
+		// for MacOS, system installed VMs need a special command to locate
+		if (Platform.OS_MACOSX.equals(Platform.getOS())) {
+			try {
+				systemVMs = new ArrayList<>(Arrays.asList(MacInstalledJREs.getInstalledJREs(monitor)));
+				systemVMs.removeIf(t -> knownVMs.contains(t.getInstallLocation()));
+				for (VMStandin systemVM : systemVMs) {
+					candidates.removeIf(t -> t.equals(systemVM.getInstallLocation()));
+				}
+			} catch (CoreException e) {
+				return e.getStatus();
+			}
+		}
+		monitor.beginTask(LaunchingMessages.lookupInstalledJVMs, candidates.size() + systemVMs.size());
 		for (File f : candidates) {
 			if (monitor.isCanceled()) {
 				return Status.CANCEL_STATUS;
@@ -78,6 +95,27 @@ class DetectVMInstallationsJob extends Job {
 			}
 			subMon.done();
 		}
+
+		// for MacOS, we may have additional system installed VMs so add them here
+		for (VMStandin systemVM : systemVMs) {
+			if (monitor.isCanceled()) {
+				return Status.CANCEL_STATUS;
+			}
+			SubMonitor subMon = SubMonitor.convert(monitor, systemVM.getInstallLocation().getAbsolutePath(), 1);
+			String name = systemVM.getName();
+			int i = 1;
+			while (isDuplicateName(name)) {
+				name = systemVM.getName() + '(' + i++ + ')';
+			}
+			systemVM.setName(name);
+			IVMInstall install = systemVM.convertToRealVM();
+			if (!(install instanceof IVMInstall2 vm && vm.getJavaVersion() != null)) {
+				// worksaround: such VMs may cause issue later
+				// https://github.com/eclipse-jdt/eclipse.jdt.debug/issues/248
+				standardType.disposeVMInstall(install.getId());
+			}
+			subMon.done();
+		}
 		return Status.OK_STATUS;
 	}
 
@@ -88,14 +126,11 @@ class DetectVMInstallationsJob extends Job {
 			.anyMatch(name::equals);
 	}
 
-	private Collection<File> computeCandidateVMs() {
+	private Collection<File> computeCandidateVMs(StandardVMType standardType) {
 		// parent directories containing a collection of VM installations
 		Collection<File> rootDirectories = new HashSet<>();
 		if (!Platform.OS_WIN32.equals(Platform.getOS())) {
 			rootDirectories.add(new File("/usr/lib/jvm")); //$NON-NLS-1$
-		}
-		if (Platform.OS_MACOSX.equals(Platform.getOS())) {
-			rootDirectories.add(new File("/Library/Java/JavaVirtualMachines")); //$NON-NLS-1$
 		}
 		rootDirectories.add(new File(System.getProperty("user.home"), ".sdkman/candidates/java")); //$NON-NLS-1$ //$NON-NLS-2$
 
@@ -115,7 +150,6 @@ class DetectVMInstallationsJob extends Job {
 			directories.add(new File(jdkHome));
 		}
 		// other common/standard lookup strategies can be added here
-
 		return directories.stream()
 			.filter(Objects::nonNull)
 			.filter(File::isDirectory)
@@ -149,6 +183,16 @@ class DetectVMInstallationsJob extends Job {
 	@Override
 	public boolean belongsTo(Object family) {
 		return family.equals(FAMILY);
+	}
+
+	public static void initialize() {
+		boolean forcedDisableVMDetection = Boolean.getBoolean("DetectVMInstallationsJob.disabled"); //$NON-NLS-1$
+		IEclipsePreferences instanceNode = InstanceScope.INSTANCE.getNode(LaunchingPlugin.getDefault().getBundle().getSymbolicName());
+		IEclipsePreferences defaultNode = DefaultScope.INSTANCE.getNode(LaunchingPlugin.getDefault().getBundle().getSymbolicName());
+		boolean defaultValue = defaultNode.getBoolean(LaunchingPlugin.PREF_DETECT_VMS_AT_STARTUP, true);
+		if (!forcedDisableVMDetection && instanceNode.getBoolean(LaunchingPlugin.PREF_DETECT_VMS_AT_STARTUP, defaultValue)) {
+			new DetectVMInstallationsJob().schedule();
+		}
 	}
 
 }
