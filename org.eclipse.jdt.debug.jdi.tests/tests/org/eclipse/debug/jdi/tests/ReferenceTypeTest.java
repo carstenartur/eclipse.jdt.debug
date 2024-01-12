@@ -56,6 +56,10 @@ public class ReferenceTypeTest extends AbstractJDITest {
 	public ReferenceTypeTest() {
 		super();
 	}
+
+	public ReferenceTypeTest(String name) {
+		super(name);
+	}
 	/**
 	 * Init the fields that are used by this test only.
 	 */
@@ -69,18 +73,9 @@ public class ReferenceTypeTest extends AbstractJDITest {
 	}
 	/**
 	 * Run all tests and output to standard output.
-	 * @param args
 	 */
 	public static void main(java.lang.String[] args) {
 		new ReferenceTypeTest().runSuite(args);
-	}
-	/**
-	 * Gets the name of the test case.
-	 * @see junit.framework.TestCase#getName()
-	 */
-	@Override
-	public String getName() {
-		return "com.sun.jdi.ReferenceType";
 	}
 	/**
 	 * Test JDI allFields().
@@ -141,7 +136,9 @@ public class ReferenceTypeTest extends AbstractJDITest {
 			ReferenceType type = iterator.next();
 			assertTrue("1." + type.name() + ".1", type.equals(type));
 			assertFalse("1." + type.name() + ".2", type.equals(other));
-			assertFalse("1." + type.name() + ".3", type.equals(fVM));
+			@SuppressWarnings("unlikely-arg-type")
+			boolean wrongClass = type.equals(fVM);
+			assertFalse("1." + type.name() + ".3", wrongClass);
 			assertFalse("1." + type.name() + ".4", type.equals(new Object()));
 			assertFalse("1." + type.name() + ".5", type.equals(null));
 			assertNotEquals("1." + type.name() + ".6", type.hashCode(), other.hashCode());

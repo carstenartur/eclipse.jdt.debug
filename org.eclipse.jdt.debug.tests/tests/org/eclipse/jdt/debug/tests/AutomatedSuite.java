@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -11,6 +11,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *     SAP SE - Support hyperlinks for stack entries with method signature
+ *     Ole Osterhagen - Issue 327 - Attribute "Without test code" is ignored in the launcher
  *******************************************************************************/
 package org.eclipse.jdt.debug.tests;
 
@@ -84,6 +85,7 @@ import org.eclipse.jdt.debug.tests.core.LiteralTests17;
 import org.eclipse.jdt.debug.tests.core.LocalVariableTests;
 import org.eclipse.jdt.debug.tests.core.ModuleOptionsTests;
 import org.eclipse.jdt.debug.tests.core.ProcessTests;
+import org.eclipse.jdt.debug.tests.core.ResolveRuntimeClasspathTests;
 import org.eclipse.jdt.debug.tests.core.RuntimeClasspathEntryTests;
 import org.eclipse.jdt.debug.tests.core.StaticVariableTests;
 import org.eclipse.jdt.debug.tests.core.StratumTests;
@@ -105,6 +107,7 @@ import org.eclipse.jdt.debug.tests.launching.ClasspathShortenerTests;
 import org.eclipse.jdt.debug.tests.launching.ConfigurationEncodingTests;
 import org.eclipse.jdt.debug.tests.launching.ConfigurationResourceMappingTests;
 import org.eclipse.jdt.debug.tests.launching.ContributedTabTests;
+import org.eclipse.jdt.debug.tests.launching.InstanceMainMethodsTests;
 import org.eclipse.jdt.debug.tests.launching.LaunchConfigurationManagerTests;
 import org.eclipse.jdt.debug.tests.launching.LaunchConfigurationTests;
 import org.eclipse.jdt.debug.tests.launching.LaunchDelegateTests;
@@ -192,6 +195,9 @@ public class AutomatedSuite extends DebugSuite {
 		addTest(new TestSuite(ConfigurationEncodingTests.class));
 		addTest(new TestSuite(LaunchConfigurationManagerTests.class));
 		addTest(new TestSuite(LaunchConfigurationTests.class));
+		if(JavaProjectHelper.isJava21_Compatible()) {
+			addTest(new TestSuite(InstanceMainMethodsTests.class));
+		}
 		addTest(new TestSuite(ProjectClasspathVariableTests.class));
 
 	//mac specific tests
@@ -246,6 +252,7 @@ public class AutomatedSuite extends DebugSuite {
 		addTest(new TestSuite(ClasspathProviderTests.class));
 		addTest(new TestSuite(BootpathTests.class));
 		addTest(new TestSuite(EEDefinitionTests.class));
+		addTest(new TestSuite(ResolveRuntimeClasspathTests.class));
 		if (JavaProjectHelper.isJava9Compatible()) {
 			addTest(new TestSuite(ModuleOptionsTests.class));
 		}

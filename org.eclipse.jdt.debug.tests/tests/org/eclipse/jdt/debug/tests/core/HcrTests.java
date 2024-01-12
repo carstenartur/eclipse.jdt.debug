@@ -31,7 +31,6 @@ import org.eclipse.jdt.debug.core.JDIDebugModel;
 import org.eclipse.jdt.debug.testplugin.DebugElementEventWaiter;
 import org.eclipse.jdt.debug.testplugin.DebugEventWaiter;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestAgainException;
 
 /**
  * Tests hot code replace
@@ -82,8 +81,6 @@ public class HcrTests extends AbstractDebugTest {
 
 		/**
 		 * Waits for notification and returns whether notified.
-		 *
-		 * @return
 		 */
 		public synchronized boolean waitNotification() {
 			if (!notified) {
@@ -198,8 +195,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a general (plug-in) listener.
-	 *
-	 * @throws Exception
 	 */
 	public void testGeneralHcrListener() throws Exception {
 		String typeName = "org.eclipse.debug.tests.targets.HcrClass";
@@ -249,8 +244,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that a target specific listener overrides a generic listener.
-	 *
-	 * @throws Exception
 	 */
 	public void testSpecificHcrListener() throws Exception {
 		String typeName = "org.eclipse.debug.tests.targets.HcrClass";
@@ -304,7 +297,6 @@ public class HcrTests extends AbstractDebugTest {
 	/**
 	 * Tests HCR in a local type with the same name as the enclosing
 	 * method
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRLocalType() throws Exception {
@@ -464,7 +456,6 @@ public class HcrTests extends AbstractDebugTest {
 	 * Tests HCR in an anonymous type with the same name as the method
 	 * where the anonymous type was defined
 	 *
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRAnonymousType() throws Exception {
@@ -517,7 +508,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR in an anonymous type defined in a method
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRAnonymousType2() throws Exception {
@@ -569,7 +559,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR in an anonymous type defined in a constructor
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRAnonymousType3() throws Exception {
@@ -621,7 +610,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on a method called from a constructor
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRConstructor() throws Exception {
@@ -673,7 +661,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR within a constructor
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRConstructor2() throws Exception {
@@ -727,7 +714,6 @@ public class HcrTests extends AbstractDebugTest {
 	/**
 	 * Tests HCR on an inner type method with the same name as the enclosing type
 	 * method it was called from
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRInnerType() throws Exception {
@@ -782,7 +768,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on an inner type method
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRInnerType2() throws Exception {
@@ -837,7 +822,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on a constructor in an inner type
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRInnerType3() throws Exception {
@@ -894,7 +878,6 @@ public class HcrTests extends AbstractDebugTest {
 	/**
 	 * Tests HCR on an enclosing method called from an inner type
 	 * method with the same name
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRInnerType4() throws Exception {
@@ -950,7 +933,6 @@ public class HcrTests extends AbstractDebugTest {
 	/**
 	 * Tests HCR on an enclosing method called from an inner type
 	 * method
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRInnerType5() throws Exception {
@@ -1005,7 +987,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on a local type defined in an inner type
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRLocalInner() throws Exception {
@@ -1060,7 +1041,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on a local type defined in an anonymous type
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRLocalAnonymous() throws Exception {
@@ -1115,7 +1095,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on an inner type defined in a local type
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRInnerLocal() throws Exception {
@@ -1170,7 +1149,6 @@ public class HcrTests extends AbstractDebugTest {
 
 	/**
 	 * Tests HCR on an anonymous type defined in a local type
-	 * @throws Exception
 	 * @since 3.8.100
 	 */
 	public void testHCRAnnonymousLocal() throws Exception {

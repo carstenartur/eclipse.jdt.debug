@@ -27,7 +27,6 @@ import org.eclipse.jdt.debug.core.IJavaThread;
 import org.eclipse.jdt.debug.eval.IEvaluationListener;
 import org.eclipse.jdt.debug.eval.IEvaluationResult;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestAgainException;
 import org.eclipse.jdt.internal.debug.eval.ast.engine.ASTEvaluationEngine;
 import org.eclipse.jdt.internal.debug.ui.threadgroups.JavaDebugTargetProxy;
 import org.eclipse.jdt.internal.debug.ui.threadgroups.JavaThreadEventHandler;
@@ -126,8 +125,6 @@ public class JavaThreadEventHandlerTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that we can (or can't) compute frame index during evaluation
-	 *
-	 * @throws Exception
 	 */
 	public void testComputeFrameIndexDuringEvaluation() throws Exception {
 		String typeName = "DropTests";

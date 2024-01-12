@@ -42,6 +42,10 @@ public class EventRequestManagerTest extends AbstractJDITest {
 	public EventRequestManagerTest() {
 		super();
 	}
+
+	public EventRequestManagerTest(String name) {
+		super(name);
+	}
 	/**
 	 * Init the fields that are used by this test only.
 	 */
@@ -52,26 +56,18 @@ public class EventRequestManagerTest extends AbstractJDITest {
 	}
 	/**
 	 * Run all tests and output to standard output.
-	 * @param args
 	 */
 	public static void main(java.lang.String[] args) {
 		new EventRequestManagerTest().runSuite(args);
-	}
-	/**
-	 * Gets the name of the test case.
-	 * @see junit.framework.TestCase#getName()
-	 */
-	@Override
-	public String getName() {
-		return "com.sun.jdi.request.EventRequestManager";
 	}
 	/**
 	 * Test JDI createAccessWatchpointRequest(Field), accessWatchpointRequests()
 	 * and deleteEventRequest(EventRequest)
 	 */
 	public void testJDIAccessWatchpointRequest() {
-		if (!fVM.canWatchFieldAccess())
+		if (!fVM.canWatchFieldAccess()) {
 			return;
+		}
 
 		// Create an access watchpoint request
 		Field field = getField();
@@ -182,8 +178,9 @@ public class EventRequestManagerTest extends AbstractJDITest {
 	 * accessWatchpointRequests() and deleteEventRequest(EventRequest)
 	 */
 	public void testJDIModificationWatchpointRequest() {
-		if (!fVM.canWatchFieldAccess())
+		if (!fVM.canWatchFieldAccess()) {
 			return;
+		}
 
 		// Create a modification watchpoint
 		Field field = getField();

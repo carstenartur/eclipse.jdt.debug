@@ -31,7 +31,6 @@ import org.eclipse.jdt.core.search.SearchEngine;
 import org.eclipse.jdt.core.search.SearchPattern;
 import org.eclipse.jdt.core.search.TypeNameRequestor;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestAgainException;
 import org.eclipse.ltk.core.refactoring.CheckConditionsOperation;
 import org.eclipse.ltk.core.refactoring.PerformRefactoringOperation;
 import org.eclipse.ltk.core.refactoring.Refactoring;
@@ -60,9 +59,6 @@ public class AbstractRefactoringDebugTest extends AbstractDebugTest {
 	/**
 	 * Performs the given refactoring. If a {@link CoreException} occurs during the refactoring, we trap it and throw a {@link TestAgainException} to
 	 * try the test again.
-	 *
-	 * @param refactoring
-	 * @throws Exception
 	 */
 	public void performRefactor(final Refactoring refactoring) throws Exception {
 		if(refactoring == null) {
@@ -86,7 +82,6 @@ public class AbstractRefactoringDebugTest extends AbstractDebugTest {
 
 	/**
 	 * Clean up all the test files
-	 * @throws CoreException
 	 */
 	protected void cleanTestFiles() throws CoreException {
 		waitUntilIndexesReady();
@@ -100,7 +95,6 @@ public class AbstractRefactoringDebugTest extends AbstractDebugTest {
 
 	/**
 	 * Cleans up refactored files and reverts the source.
-	 * @throws Exception
 	 */
 	private void doClean() throws Exception {
 		IJavaProject javaProject = get14Project();

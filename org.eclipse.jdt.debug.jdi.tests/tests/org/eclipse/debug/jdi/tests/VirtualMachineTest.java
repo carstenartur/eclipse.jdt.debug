@@ -48,6 +48,10 @@ public class VirtualMachineTest extends AbstractJDITest {
 	public VirtualMachineTest() {
 		super();
 	}
+
+	public VirtualMachineTest(String name) {
+		super(name);
+	}
 	/**
 	 * Init the fields that are used by this test only.
 	 */
@@ -56,18 +60,9 @@ public class VirtualMachineTest extends AbstractJDITest {
 	}
 	/**
 	 * Run all tests and output to standard output.
-	 * @param args
 	 */
 	public static void main(java.lang.String[] args) {
 		new VirtualMachineTest().runSuite(args);
-	}
-	/**
-	 * Gets the name of the test case.
-	 * @see junit.framework.TestCase#getName()
-	 */
-	@Override
-	public String getName() {
-		return "com.sun.jdi.VirtualMachine";
 	}
 	/**
 	 * Don't start the program yet, so that the testNotStarted* tests can run before.

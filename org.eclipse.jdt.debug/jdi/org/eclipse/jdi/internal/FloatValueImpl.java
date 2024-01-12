@@ -25,7 +25,6 @@ import com.sun.jdi.Type;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class FloatValueImpl extends PrimitiveValueImpl implements FloatValue, Comparable<FloatValue> {
 	/** JDWP Tag. */
@@ -39,7 +38,7 @@ public class FloatValueImpl extends PrimitiveValueImpl implements FloatValue, Co
 	}
 
 	/**
-	 * @returns tag.
+	 * @return tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -47,7 +46,7 @@ public class FloatValueImpl extends PrimitiveValueImpl implements FloatValue, Co
 	}
 
 	/**
-	 * @returns type of value.
+	 * @return type of value.
 	 */
 	@Override
 	public Type type() {
@@ -63,7 +62,7 @@ public class FloatValueImpl extends PrimitiveValueImpl implements FloatValue, Co
 	}
 
 	/**
-	 * @returns Value.
+	 * @return Value.
 	 */
 	@Override
 	public float value() {

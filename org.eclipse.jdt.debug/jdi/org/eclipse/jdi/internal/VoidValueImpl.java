@@ -23,7 +23,6 @@ import com.sun.jdi.VoidValue;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class VoidValueImpl extends ValueImpl implements VoidValue {
 	/** JDWP Tag. */
@@ -37,7 +36,7 @@ public class VoidValueImpl extends ValueImpl implements VoidValue {
 	}
 
 	/**
-	 * @returns tag.
+	 * @return tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -45,7 +44,7 @@ public class VoidValueImpl extends ValueImpl implements VoidValue {
 	}
 
 	/**
-	 * @returns type of value.
+	 * @return type of value.
 	 */
 	@Override
 	public Type type() {
