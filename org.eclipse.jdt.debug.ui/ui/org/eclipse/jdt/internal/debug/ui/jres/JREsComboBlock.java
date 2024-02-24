@@ -342,7 +342,7 @@ public class JREsComboBlock {
 		fVMs.clear();
 		fVMs.addAll(jres);
 		// sort by name
-		Collections.sort(fVMs, new Comparator<Object>() {
+		Collections.sort(fVMs, new Comparator<>() {
 			@Override
 			public int compare(Object o1, Object o2) {
 				IVMInstall left = (IVMInstall)o1;
@@ -591,7 +591,6 @@ public class JREsComboBlock {
 	 * Sets the selection based on the given container path and returns
 	 * a status indicating if the selection was successful.
 	 *
-	 * @param containerPath
 	 * @return status
 	 */
 	public void setPath(IPath containerPath) {

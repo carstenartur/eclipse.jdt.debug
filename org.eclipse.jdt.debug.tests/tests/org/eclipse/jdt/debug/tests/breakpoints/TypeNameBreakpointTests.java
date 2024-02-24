@@ -33,7 +33,6 @@ import org.eclipse.jdt.debug.core.JDIDebugModel;
 import org.eclipse.jdt.debug.testplugin.DebugElementKindEventDetailWaiter;
 import org.eclipse.jdt.debug.testplugin.DebugEventWaiter;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestAgainException;
 import org.eclipse.jdt.internal.debug.core.JavaDebugUtils;
 import org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint;
 import org.eclipse.jdt.internal.debug.core.breakpoints.JavaClassPrepareBreakpoint;
@@ -63,7 +62,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Constructor
-	 * @param name
 	 */
 	public TypeNameBreakpointTests(String name) {
 		super(name);
@@ -85,8 +83,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JavaDebugUtils#typeNamesEqual(String, String)} method
-	 *
-	 * @throws Exception
 	 */
 	public void testTypeNamesEqual() throws Exception {
 		assertTrue("The type names should be equal when both null", JavaDebugUtils.typeNamesEqual(null, null));
@@ -106,9 +102,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get a line breakpoint with a null type name
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaLineBreakpoint getNullTypeLineBreakpoint() throws Exception {
 		JavaLineBreakpoint bp = (JavaLineBreakpoint) JDIDebugModel.createLineBreakpoint(getTestResource(), null, 16, -1, -1, 0, true, null);
@@ -118,9 +111,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get an exception breakpoint with a null type
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaExceptionBreakpoint getNullTypeExBreakpoint() throws Exception {
 		JavaExceptionBreakpoint bp = (JavaExceptionBreakpoint) JDIDebugModel.createExceptionBreakpoint(getTestResource(), null, true, false, true, true, null);
@@ -130,9 +120,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get a method entry breakpoint with a null type
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaMethodEntryBreakpoint getNullTypeMethodEntryBreakpoint() throws Exception {
 		JavaMethodEntryBreakpoint bp = (JavaMethodEntryBreakpoint) JDIDebugModel.createMethodEntryBreakpoint(getTestResource(), null, null, null, 15, -1, -1, 0, true, null);
@@ -142,9 +129,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get a stratum line breakpoint with no type
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaStratumLineBreakpoint getNullTypeStratumLineBreakpoint() throws Exception {
 		JavaStratumLineBreakpoint bp = (JavaStratumLineBreakpoint) JDIDebugModel.createStratumBreakpoint(getTestResource(), null, null, null, null, 15, -1, -1, 0, true, null);
@@ -154,9 +138,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get a class prepare breakpoint with a null type
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaClassPrepareBreakpoint getNullTypeClassPrepareBreakpoint() throws Exception {
 		JavaClassPrepareBreakpoint bp = (JavaClassPrepareBreakpoint) JDIDebugModel.createClassPrepareBreakpoint(getTestResource(), null, 1, -1, -1, true, null);
@@ -166,9 +147,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get a watchpoint with a null type
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaWatchpoint getNullTypeWatchpoint() throws Exception {
 		JavaWatchpoint bp = (JavaWatchpoint) JDIDebugModel.createWatchpoint(getTestResource(), null, null, 15, -1, -1, 0, true, null);
@@ -180,9 +158,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Util to get a method breakpoint with a null type
-	 *
-	 * @return
-	 * @throws Exception
 	 */
 	JavaMethodBreakpoint getNullTypeMethodBreakpoint() throws Exception {
 		JavaMethodBreakpoint bp = (JavaMethodBreakpoint) JDIDebugModel.createMethodBreakpoint(getTestResource(), null, null, null, true, true, false, 15, -1, -1, 0, true, null);
@@ -193,8 +168,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	/**
 	 * Tests {@link JDIDebugModel#createLineBreakpoint(org.eclipse.core.resources.IResource, String, int, int, int, int, boolean, java.util.Map)} with
 	 * a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testCreateLineBPNullTypeName() throws Exception {
 		try {
@@ -210,8 +183,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	 * Tests the
 	 * {@link JDIDebugModel#createMethodBreakpoint(IResource, String, String, String, boolean, boolean, boolean, int, int, int, int, boolean, java.util.Map)}
 	 * method with null type infos
-	 *
-	 * @throws Exception
 	 */
 	public void testCreateMethodBPNullTypeName() throws Exception {
 		try {
@@ -226,8 +197,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	/**
 	 * Tests the {@link JDIDebugModel#createExceptionBreakpoint(IResource, String, boolean, boolean, boolean, boolean, java.util.Map)} method with
 	 * null type infos
-	 *
-	 * @throws Exception
 	 */
 	public void testCreateExceptionBPNullTypeName() throws Exception {
 		try {
@@ -242,8 +211,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	/**
 	 * Tests the {@link JDIDebugModel#createClassPrepareBreakpoint(IResource, String, int, int, int, boolean, java.util.Map)} method with null type
 	 * infos
-	 *
-	 * @throws Exception
 	 */
 	public void testCreateClassPrepareBPNullTypeName() throws Exception {
 		try {
@@ -258,8 +225,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	/**
 	 * Tests the {@link JDIDebugModel#createWatchpoint(IResource, String, String, int, int, int, int, boolean, java.util.Map)} method with null type
 	 * infos
-	 *
-	 * @throws Exception
 	 */
 	public void testCreateWatchpointBPNullTypeName() throws Exception {
 		try {
@@ -274,8 +239,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	/**
 	 * Tests the {@link JDIDebugModel#createStratumBreakpoint(IResource, String, String, String, String, int, int, int, int, boolean, java.util.Map)}
 	 * method with null type infos
-	 *
-	 * @throws Exception
 	 */
 	public void testCreateStratumBPNullTypeName() throws Exception {
 		try {
@@ -290,8 +253,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 	/**
 	 * Tests the {@link JDIDebugModel#createMethodEntryBreakpoint(IResource, String, String, String, int, int, int, int, boolean, java.util.Map)}
 	 * method with null type infos
-	 *
-	 * @throws Excpetion
 	 */
 	public void testCreateMethodEntryBPNullTypeName() throws Exception {
 		try {
@@ -305,8 +266,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getMarkerTypeName}
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationNullTypeName() throws Exception {
 		try {
@@ -321,8 +280,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getExceptionBreakpointText} with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationTypeNameNull2() throws Exception {
 		try {
@@ -337,8 +294,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getLineBreakpointText} with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationTypeNameNull3() throws Exception {
 		try {
@@ -353,8 +308,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getClassPrepareBreakpointText} with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationTypeNameNull4() throws Exception {
 		try {
@@ -369,8 +322,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getWatchpointText} with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationTypeNameNull5() throws Exception {
 		try {
@@ -385,8 +336,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getMethodBreakpointText} with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationTypeNameNull6() throws Exception {
 		try {
@@ -401,8 +350,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIModelPresentation#getStratumLineBreakpointText} with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testGetPresentationTypeNameNull7() throws Exception {
 		try {
@@ -417,8 +364,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIDebugModel#lineBreakpointExists(String, int)} method
-	 *
-	 * @throws Exception
 	 */
 	public void testJDIDebugModelTypeName2() throws Exception {
 		try {
@@ -432,8 +377,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests the {@link JDIDebugModel#lineBreakpointExists(String, int)} method with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testJDIModelTypeNameNull1() throws Exception {
 		try {
@@ -447,8 +390,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that launching with a null typed breakpoint does not suspend and does not cause a failure while trying to create requests
-	 *
-	 * @throws Exception
 	 */
 	public void testLaunchNullTypeLineBreakpoint() throws Exception {
 		getNullTypeLineBreakpoint();
@@ -466,8 +407,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests launching with an exception breakpoint with a null type name
-	 *
-	 * @throws Exception
 	 */
 	public void testLaunchNullTypeExceptionBreakpoint() throws Exception {
 		getNullTypeExBreakpoint();
@@ -485,8 +424,6 @@ public class TypeNameBreakpointTests extends AbstractDebugTest {
 
 	/**
 	 * Tests launching with a watchpoint with a null type
-	 *
-	 * @throws Exception
 	 */
 	public void testLaunchNullTypeWatchpoint() throws Exception {
 		getNullTypeWatchpoint();

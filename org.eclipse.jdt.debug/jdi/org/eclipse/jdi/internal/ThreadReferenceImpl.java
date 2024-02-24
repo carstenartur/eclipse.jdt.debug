@@ -50,7 +50,6 @@ import com.sun.jdi.Value;
 /**
  * This class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class ThreadReferenceImpl extends ObjectReferenceImpl implements	ThreadReference, org.eclipse.jdi.hcr.ThreadReference {
 	/** ThreadStatus Constants. */
@@ -106,7 +105,7 @@ public class ThreadReferenceImpl extends ObjectReferenceImpl implements	ThreadRe
 	}
 
 	/**
-	 * @returns Value tag.
+	 * @return Value tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -114,7 +113,7 @@ public class ThreadReferenceImpl extends ObjectReferenceImpl implements	ThreadRe
 	}
 
 	/**
-	 * @returns Returns an ObjectReference for the monitor, if any, for which
+	 * @return Returns an ObjectReference for the monitor, if any, for which
 	 *          this thread is currently waiting.
 	 */
 	@Override
@@ -210,7 +209,7 @@ public class ThreadReferenceImpl extends ObjectReferenceImpl implements	ThreadRe
 	}
 
 	/**
-	 * @returns Returns the StackFrame at the given index in the thread's
+	 * @return Returns the StackFrame at the given index in the thread's
 	 *          current call stack.
 	 */
 	@Override

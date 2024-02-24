@@ -38,7 +38,6 @@ import com.sun.jdi.Value;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class ArrayReferenceImpl extends ObjectReferenceImpl implements
 		ArrayReference {
@@ -57,7 +56,7 @@ public class ArrayReferenceImpl extends ObjectReferenceImpl implements
 	}
 
 	/**
-	 * @returns tag.
+	 * @return tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -69,7 +68,7 @@ public class ArrayReferenceImpl extends ObjectReferenceImpl implements
 	 * @param index the index
 	 * @return the {@link Value} at the given index
 	 * @throws IndexOutOfBoundsException if the index is outside the bounds of the array
-	 * @returns Returns an array component value.
+	 * @return Returns an array component value.
 	 */
 	@Override
 	public Value getValue(int index) throws IndexOutOfBoundsException {
@@ -91,7 +90,7 @@ public class ArrayReferenceImpl extends ObjectReferenceImpl implements
 	 * @param length the  number of values to return
 	 * @return the list of {@link Value}s
 	 * @throws IndexOutOfBoundsException if the index is outside the bounds of the array
-	 * @returns Returns a range of array components.
+	 * @return Returns a range of array components.
 	 */
 	@Override
 	public List<Value> getValues(int firstIndex, int length)
@@ -188,7 +187,7 @@ public class ArrayReferenceImpl extends ObjectReferenceImpl implements
 	 * @param in the stream to read from
 	 * @return the {@link List} of {@link ValueImpl}s
 	 * @throws IOException if the reading fails
-	 * @returns Returns sequence of object reference values.
+	 * @return Returns sequence of object reference values.
 	 */
 	private List<Value> readObjectSequence(int length, DataInputStream in)
 			throws IOException {

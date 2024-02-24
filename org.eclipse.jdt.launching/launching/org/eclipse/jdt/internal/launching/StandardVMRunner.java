@@ -81,7 +81,6 @@ public class StandardVMRunner extends AbstractVMRunner {
 	/**
 	 * Returns the 'rendered' name for the specified command line
 	 *
-	 * @param p
 	 * @param commandLine
 	 *            the command line
 	 * @param timestamp
@@ -157,7 +156,6 @@ public class StandardVMRunner extends AbstractVMRunner {
 	 * @param config the backing {@link ILaunchConfiguration}
 	 * @param cmdLine the original VM arguments
 	 * @return the (possibly) modified command line to launch with
-	 * @throws CoreException
 	 */
 	private String[] wrap(ILaunchConfiguration config, String[] cmdLine) throws CoreException {
 		if(config != null && Platform.OS_MACOSX.equals(Platform.getOS())) {
@@ -176,7 +174,6 @@ public class StandardVMRunner extends AbstractVMRunner {
 	 * Returns path to executable.
 	 * @param cmdLine the old command line
 	 * @param vmVersion the version of the VM
-	 * @param startonfirstthread
 	 * @return the new command line
 	 */
 	private String[] createSWTlauncher(String[] cmdLine, String vmVersion, boolean startonfirstthread) {
@@ -334,7 +331,7 @@ public class StandardVMRunner extends AbstractVMRunner {
 
 	/**
 	 * This method is used to ensure that the JVM file encoding matches that of the console preference for file encoding. If the user explicitly
-	 * declares a file encoding in the launch configuration, then that file encoding is used.
+	 * declares a file encoding in the launch configuration, then that file encoding is used. This is needed for Java >=19.
 	 *
 	 * @param launch
 	 *            the {@link Launch}
@@ -343,8 +340,8 @@ public class StandardVMRunner extends AbstractVMRunner {
 	 * @return the listing of JVM arguments including file encoding if one was not specified
 	 *
 	 * @since 3.4
-	 * @see {@link System#out} for Java >=19 *
-	 * @see {@link System#err} for Java >=19 *
+	 * @see System#out
+	 * @see System#err
 	 */
 	protected String[] ensureEncoding(ILaunch launch, String[] vmargs) {
 		String encoding = launch.getAttribute(DebugPlugin.ATTR_CONSOLE_ENCODING);

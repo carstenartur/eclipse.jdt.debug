@@ -19,7 +19,6 @@ import com.sun.jdi.Value;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class CharTypeImpl extends PrimitiveTypeImpl implements CharType {
 	/**
@@ -30,7 +29,7 @@ public class CharTypeImpl extends PrimitiveTypeImpl implements CharType {
 	}
 
 	/**
-	 * @returns primitive type tag.
+	 * @return primitive type tag.
 	 */
 	@Override
 	public byte tag() {

@@ -109,7 +109,24 @@ public abstract class AbstractJDITest extends TestCase {
 	 * Constructs a test case with a default name.
 	 */
 	public AbstractJDITest() {
-		super("JDI Test");
+		this("JDI Test");
+	}
+
+	public AbstractJDITest(String name) {
+		super(name);
+	}
+
+	static {
+		fTargetAddress = System.getProperty("java.home");
+		fVMLauncherName = "DefaultVMLauncher";
+		fClassPath = new File("./bin").getAbsolutePath();
+		fBootPath = "";
+		fVMType = "?";
+	}
+
+	@Override
+	public final String getName() {
+		return super.getName();
 	}
 	/**
 	 * Returns the names of the tests that are known to not work
@@ -160,7 +177,6 @@ public abstract class AbstractJDITest extends TestCase {
 	 * @return <code>true</code> if a 1.6 or higher VM
 	 * @since 3.8
 	 */
-	@SuppressWarnings("restriction")
 	protected boolean is16OrGreater() {
 		return ((VirtualMachineImpl) fVM).isJdwpVersionGreaterOrEqual(1, 6);
 	}
@@ -688,7 +704,6 @@ public abstract class AbstractJDITest extends TestCase {
 	 * Parse the command {@link String} to make sure we use
 	 * {@link Runtime#exec(String[])}.
 	 *
-	 * @param command
 	 * @return the array of items from the command {@link String}
 	 * @since 4.3
 	 */
@@ -843,7 +858,6 @@ public abstract class AbstractJDITest extends TestCase {
 	 * Flattens the variable size command line and calls Runtime.exec().
 	 * @param commandLine A vector of command line argument strings.
 	 * @return The Process created by Runtime.exec()
-	 * @throws IOException
 	 */
 	private Process exec(Vector<String> commandLine) throws IOException {
 		String[] vmString = new String[commandLine.size()];

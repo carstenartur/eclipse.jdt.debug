@@ -24,7 +24,6 @@ import org.eclipse.jdt.debug.core.IJavaStackFrame;
 import org.eclipse.jdt.debug.core.IJavaThread;
 import org.eclipse.jdt.debug.core.IJavaVariable;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestAgainException;
 import org.eclipse.jdt.internal.debug.core.model.JDIArrayValue;
 import org.eclipse.jdt.internal.debug.core.model.JDILocalVariable;
 import org.eclipse.jdt.internal.debug.core.model.JDINullValue;
@@ -40,7 +39,6 @@ public class LocalVariableTests extends AbstractDebugTest implements IValueDetai
 	/**
 	 * Tests if the correct local variable is found when it shadows a field variable
 	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=384458
-	 * @throws Exception
 	 */
 	public void testFindConflicting1() throws Exception {
 		String typeName = "LocalVariableTests2";
@@ -66,7 +64,6 @@ public class LocalVariableTests extends AbstractDebugTest implements IValueDetai
 	/**
 	 * Tests if the correct parameter variable is found when it shadows a field variable
 	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=384458
-	 * @throws Exception
 	 */
 	public void testFindConflicting2() throws Exception {
 		String typeName = "LocalVariableTests2";

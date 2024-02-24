@@ -13,8 +13,6 @@
  *******************************************************************************/
 package org.eclipse.jdi.internal.event;
 
-import java.io.DataInputStream;
-
 import org.eclipse.jdi.internal.MirrorImpl;
 import org.eclipse.jdi.internal.VirtualMachineImpl;
 import org.eclipse.jdi.internal.request.RequestID;
@@ -24,7 +22,6 @@ import com.sun.jdi.event.VMDisconnectEvent;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class VMDisconnectEventImpl extends EventImpl implements
 		VMDisconnectEvent {
@@ -41,13 +38,9 @@ public class VMDisconnectEventImpl extends EventImpl implements
 	/**
 	 * Creates, reads and returns new EventImpl, of which requestID has
 	 *         already been read.
-	 * @param target
-	 * @param requestID
-	 * @param dataInStream
 	 * @return the new event
 	 */
-	public static VMDisconnectEventImpl read(MirrorImpl target,
-			RequestID requestID, DataInputStream dataInStream) {
+	static VMDisconnectEventImpl read(MirrorImpl target, RequestID requestID) {
 		VirtualMachineImpl vmImpl = target.virtualMachineImpl();
 		VMDisconnectEventImpl event = new VMDisconnectEventImpl(vmImpl,
 				requestID);

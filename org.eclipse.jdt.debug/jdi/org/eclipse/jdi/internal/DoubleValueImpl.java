@@ -25,7 +25,6 @@ import com.sun.jdi.Type;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class DoubleValueImpl extends PrimitiveValueImpl implements DoubleValue, Comparable<DoubleValue> {
 	/** JDWP Tag. */
@@ -39,7 +38,7 @@ public class DoubleValueImpl extends PrimitiveValueImpl implements DoubleValue, 
 	}
 
 	/**
-	 * @returns tag.
+	 * @return tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -47,7 +46,7 @@ public class DoubleValueImpl extends PrimitiveValueImpl implements DoubleValue, 
 	}
 
 	/**
-	 * @returns type of value.
+	 * @return type of value.
 	 */
 	@Override
 	public Type type() {
@@ -63,7 +62,7 @@ public class DoubleValueImpl extends PrimitiveValueImpl implements DoubleValue, 
 	}
 
 	/**
-	 * @returns Value.
+	 * @return Value.
 	 */
 	@Override
 	public double value() {
