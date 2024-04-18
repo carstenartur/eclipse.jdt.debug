@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -180,6 +180,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	public static final String NINE_PROJECT_NAME = "Nine";
 	public static final String ONESIX_PROJECT_NAME = "One_Six";
 	public static final String TWENTYONE_PROJECT_NAME = "Two_One";
+	public static final String TWENTYTWO_PROJECT_NAME = "Two_Two";
 	public static final String BOUND_JRE_PROJECT_NAME = "BoundJRE";
 	public static final String CLONE_SUFFIX = "Clone";
 
@@ -235,6 +236,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	private static boolean loaded9 = false;
 	private static boolean loaded16_ = false;
 	private static boolean loaded21 = false;
+	private static boolean loaded22 = false;
 	private static boolean loadedEE = false;
 	private static boolean loadedJRE = false;
 	private static boolean loadedMulti = false;
@@ -467,7 +469,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	        	jp = createProject(ONE_EIGHT_PROJECT_NAME, JavaProjectHelper.TEST_1_8_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 				IPath lib = new Path(JavaTestPlugin.getDefault().getFileInPlugin(new Path("testjars").append("gh275").append("debug-lib.jar")).getAbsolutePath());
 				JavaProjectHelper.addLibrary(jp, lib);
-	
+
 	    		cfgs.add(createLaunchConfiguration(jp, "EvalTest18"));
 	    		cfgs.add(createLaunchConfiguration(jp, "FunctionalCaptureTest18"));
 	    		cfgs.add(createLaunchConfiguration(jp, "EvalTestIntf18"));
@@ -611,6 +613,36 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 				// ignore
 			}
 			handleProjectCreationException(e, TWENTYONE_PROJECT_NAME, jp);
+		}
+	}
+
+	/**
+	 * Creates the Java 21 compliant project
+	 */
+	synchronized void assert22Project() {
+		IJavaProject jp = null;
+		ArrayList<ILaunchConfiguration> cfgs = new ArrayList<>(1);
+		try {
+			if (!loaded22) {
+				jp = createProject(TWENTYTWO_PROJECT_NAME, JavaProjectHelper.TEST_22_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_22_EE_NAME, false);
+				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.ENABLED);
+				cfgs.add(createLaunchConfiguration(jp, "Main1"));
+				cfgs.add(createLaunchConfiguration(jp, "Main2"));
+				loaded22 = true;
+				waitForBuild();
+			}
+		} catch (Exception e) {
+			try {
+				if (jp != null) {
+					jp.getProject().delete(true, true, null);
+					for (int i = 0; i < cfgs.size(); i++) {
+						cfgs.get(i).delete();
+					}
+				}
+			} catch (CoreException ce) {
+				// ignore
+			}
+			handleProjectCreationException(e, TWENTYTWO_PROJECT_NAME, jp);
 		}
 	}
 
@@ -911,6 +943,16 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
+	 * Returns the 'Two_One' project, used for Java 21 tests.
+	 *
+	 * @return the test project
+	 */
+	protected IJavaProject get22Project() {
+		assert22Project();
+		return getJavaProject(TWENTYTWO_PROJECT_NAME);
+	}
+
+	/**
 	 * Returns the 'BoundJRE' project
 	 *
 	 * @return the test project
@@ -952,16 +994,20 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Creates a new {@link IJavaProject} with the given name and optionally initializing it from the given
-	 * resource path from the testing bundle.
-	 * <br><br>
-	 * The project has the default <code>src</code> and <code>bin</code> folders. It is also created with a default
-	 * <code>launchConfigurations</code> folder.
+	 * Creates a new {@link IJavaProject} with the given name and optionally initializing it from the given resource path from the testing bundle.
+	 * <br>
+	 * <br>
+	 * The project has the default <code>src</code> and <code>bin</code> folders. It is also created with a default <code>launchConfigurations</code>
+	 * folder.
 	 *
-	 * @param name the name for the project
-	 * @param contentpath the path within the jdt.debug test bundle to initialize the source from
-	 * @param ee the level of execution environment to use
-	 * @param if an existing project should be deleted
+	 * @param name
+	 *            the name for the project
+	 * @param contentpath
+	 *            the path within the jdt.debug test bundle to initialize the source from
+	 * @param ee
+	 *            the level of execution environment to use
+	 * @param delete
+	 *            if an existing project should be deleted
 	 * @return the new Java project
 	 */
 	protected IJavaProject createProject(String name, String contentpath, String ee, boolean delete) throws Exception {
@@ -998,16 +1044,19 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Creates a new {@link IJavaProject} with the given name and initializes the contents from the given
-	 * resource path from the testing bundle.
-	 * <br><br>
-	 * The project has the default <code>src</code> and <code>bin</code> folders. It is also created with a default
-	 * <code>launchConfigurations</code> folder.
+	 * Creates a new {@link IJavaProject} with the given name and initializes the contents from the given resource path from the testing bundle. <br>
+	 * <br>
+	 * The project has the default <code>src</code> and <code>bin</code> folders. It is also created with a default <code>launchConfigurations</code>
+	 * folder.
 	 *
-	 * @param name the name for the project
-	 * @param contentpath the path within the jdt.debug test bundle to initialize the source from
-	 * @param ee the level of execution environment to use
-	 * @param if an existing project should be deleted
+	 * @param name
+	 *            the name for the project
+	 * @param contentpath
+	 *            the path within the jdt.debug test bundle to initialize the source from
+	 * @param ee
+	 *            the level of execution environment to use
+	 * @param delete
+	 *            if an existing project should be deleted
 	 * @return the new Java project
 	 */
 	protected IJavaProject createJavaProjectClone(String name, String contentpath, String ee, boolean delete) throws Exception {
@@ -1053,12 +1102,14 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Creates a new {@link IProject} with the given name and initializes the contents from the given
-	 * resource path from the testing bundle.
+	 * Creates a new {@link IProject} with the given name and initializes the contents from the given resource path from the testing bundle.
 	 *
-	 * @param name the name for the project
-	 * @param contentpath the path within the jdt.debug test bundle to initialize the source from
-	 * @param if an existing project should be deleted
+	 * @param name
+	 *            the name for the project
+	 * @param contentpath
+	 *            the path within the jdt.debug test bundle to initialize the source from
+	 * @param delete
+	 *            if an existing project should be deleted
 	 * @return the new project
 	 */
 	protected IProject createProjectClone(String name, String contentpath, boolean delete) throws Exception {
@@ -1170,45 +1221,54 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Launches the given configuration and waits for an event. Returns the
-	 * source of the event. If the event is not received, the launch is
+	 * Launches the given configuration and waits for an event. Returns the source of the event. If the event is not received, the launch is
 	 * terminated and an exception is thrown.
 	 *
-	 * @param configuration the configuration to launch
-	 * @param waiter the event waiter to use
+	 * @param configuration
+	 *            the configuration to launch
+	 * @param waiter
+	 *            the event waiter to use
 	 * @return Object the source of the event
-	 * @exception Exception if the event is never received.
+	 * @throws CoreException
+	 *             if the event is never received.
 	 */
 	protected Object launchAndWait(ILaunchConfiguration configuration, DebugEventWaiter waiter) throws CoreException {
 	    return launchAndWait(configuration, waiter, true);
 	}
 
 	/**
-	 * Launches the given configuration in debug mode and waits for an event.
-	 * Returns the source of the event. If the event is not received, the
+	 * Launches the given configuration in debug mode and waits for an event. Returns the source of the event. If the event is not received, the
 	 * launch is terminated and an exception is thrown.
 	 *
-	 * @param configuration the configuration to launch
-	 * @param waiter the event waiter to use
-	 * @param register whether to register the launch
+	 * @param configuration
+	 *            the configuration to launch
+	 * @param waiter
+	 *            the event waiter to use
+	 * @param register
+	 *            whether to register the launch
 	 * @return Object the source of the event
-	 * @exception Exception if the event is never received.
+	 * @throws CoreException
+	 *             if the event is never received.
 	 */
 	protected Object launchAndWait(ILaunchConfiguration configuration, DebugEventWaiter waiter, boolean register) throws CoreException {
 		return launchAndWait(configuration, ILaunchManager.DEBUG_MODE, waiter, register);
 	}
 
 	/**
-	 * Launches the given configuration and waits for an event. Returns the
-	 * source of the event. If the event is not received, the launch is
+	 * Launches the given configuration and waits for an event. Returns the source of the event. If the event is not received, the launch is
 	 * terminated and an exception is thrown.
 	 *
-	 * @param configuration the configuration to launch
-	 * @param mode the mode to launch the configuration in
-	 * @param waiter the event waiter to use
-	 * @param register whether to register the launch
+	 * @param configuration
+	 *            the configuration to launch
+	 * @param mode
+	 *            the mode to launch the configuration in
+	 * @param waiter
+	 *            the event waiter to use
+	 * @param register
+	 *            whether to register the launch
 	 * @return Object the source of the event
-	 * @exception Exception if the event is never received.
+	 * @throws CoreException
+	 *             if the event is never received.
 	 */
 	protected Object launchAndWait(ILaunchConfiguration configuration, String mode, DebugEventWaiter waiter, boolean register) throws CoreException {
 		ILaunch launch = configuration.launch(mode, null, false, register);
@@ -1367,12 +1427,13 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Launches the given configuration in debug mode, and waits for a breakpoint-caused
-	 * suspend event in that program. Returns the thread in which the suspend
-	 * event occurred.
+	 * Launches the given configuration in debug mode, and waits for a breakpoint-caused suspend event in that program. Returns the thread in which
+	 * the suspend event occurred.
 	 *
-	 * @param config the configuration to launch
-	 * @param whether to register the launch
+	 * @param config
+	 *            the configuration to launch
+	 * @param register
+	 *            whether to register the launch
 	 * @return thread in which the first suspend event occurred
 	 */
 	protected IJavaThread launchToBreakpoint(ILaunchConfiguration config, boolean register) throws CoreException {
@@ -1391,7 +1452,6 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 * event occurred.
 	 *
 	 * @param mainTypeName the program to launch
-	 * @param timeout the number of milliseconds to wait for a terminate event
 	 * @return debug target in which the terminate event occurred
 	 */
 	protected IJavaDebugTarget launchAndTerminate(String mainTypeName) throws Exception {
@@ -1551,10 +1611,11 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Resumes the given thread, and waits for a suspend event caused by the specified
-	 * line breakpoint.  Returns the thread in which the suspend event occurs.
+	 * Resumes the given thread, and waits for a suspend event caused by the specified line breakpoint. Returns the thread in which the suspend event
+	 * occurs.
 	 *
-	 * @param thread thread to resume
+	 * @param resumeThread
+	 *            thread to resume
 	 * @return thread in which the first suspend event occurs
 	 */
 	protected IJavaThread resumeToLineBreakpoint(IJavaThread resumeThread, ILineBreakpoint bp) throws Exception {
@@ -2028,7 +2089,6 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	/**
 	 * Creates and returns a class prepare breakpoint on the type with the given fully qualified name.
 	 *
-	 * @param typeName type on which to create the breakpoint
 	 * @return breakpoint
 	 */
 	protected IJavaClassPrepareBreakpoint createClassPrepareBreakpoint(String root,
@@ -2082,10 +2142,14 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	/**
 	 * Creates and returns a watchpoint
 	 *
-	 * @param typeNmae type name
-	 * @param fieldName field name
-	 * @param access whether to suspend on field access
-	 * @param modification whether to suspend on field modification
+	 * @param typeName
+	 *            type name
+	 * @param fieldName
+	 *            field name
+	 * @param access
+	 *            whether to suspend on field access
+	 * @param modification
+	 *            whether to suspend on field modification
 	 */
 	protected IJavaWatchpoint createWatchpoint(String typeName, String fieldName, boolean access, boolean modification) throws Exception {
 		IType type = getType(typeName);
@@ -2133,7 +2197,6 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 * @return a watchpoint
 	 * @throws CoreException
 	 *
-	 * <p>
 	 * <pre>
 	 * Syntax example:
 	 * Type$InnerType$MethodNameAndSignature$AnonymousTypeDeclarationNumber$FieldName
@@ -2150,7 +2213,6 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 * 			}
 	 * 		}
 	 * }</pre>
-	 * </p>
 	 * To get the anonymous toString, syntax of fullTargetName would be: <code>Foo$Inner$aMethod()V$1$anIntField</code>
 	 */
 	protected IJavaWatchpoint createNestedTypeWatchPoint(String root, String packageName, String cuName,
@@ -2428,11 +2490,12 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
-	 * Performs a step into with filters in the given stack frame and returns when
-	 * complete.
+	 * Performs a step into with filters in the given stack frame and returns when complete.
 	 *
-	 * @param whether to step thru or step return from a filtered location
-	 * @param frame stack frame to step in
+	 * @param frame
+	 *            stack frame to step in
+	 * @param stepThru
+	 *            whether to step thru or step return from a filtered location
 	 */
 	protected IJavaThread stepIntoWithFilters(IJavaStackFrame frame, boolean stepThru) throws Exception {
 		DebugEventWaiter waiter= new DebugElementKindEventWaiter(DebugEvent.SUSPEND, IJavaThread.class);
