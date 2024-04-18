@@ -32,6 +32,10 @@ public class EventTest extends AbstractJDITest {
 	public EventTest() {
 		super();
 	}
+
+	public EventTest(String name) {
+		super(name);
+	}
 	/**
 	 * Init the fields that are used by this test only.
 	 */
@@ -55,9 +59,6 @@ public class EventTest extends AbstractJDITest {
 			request,
 			triggerAndWait(request, "BreakpointEvent", true));
 
-		// TODO ClassPrepareEvent
-		// TODO ClassUnloadEvent
-		// TODO ExceptionEvent
 
 		// ModificationWatchpointEvent
 		if (fVM.canWatchFieldModification()) {
@@ -67,10 +68,6 @@ public class EventTest extends AbstractJDITest {
 				triggerAndWait(request, "ModificationWatchpointEvent", true));
 		}
 
-		// TODO StepEvent
-		// TODO ThreadEndEvent
-		// TODO ThreadStartEvent
-		// TODO VMDeathEvent
 
 	}
 	/**
@@ -91,18 +88,9 @@ public class EventTest extends AbstractJDITest {
 	}
 	/**
 	 * Run all tests and output to standard output.
-	 * @param args
 	 */
 	public static void main(java.lang.String[] args) {
 		new EventTest().runSuite(args);
-	}
-	/**
-	 * Gets the name of the test case.
-	 * @see junit.framework.TestCase#getName()
-	 */
-	@Override
-	public String getName() {
-		return "com.sun.jdi.event.Event";
 	}
 	/**
 	 * Test JDI request().

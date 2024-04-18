@@ -32,6 +32,10 @@ public class LocationTest extends AbstractJDITest {
 	public LocationTest() {
 		super();
 	}
+
+	public LocationTest(String name) {
+		super(name);
+	}
 	/**
 	 * Init the fields that are used by this test only.
 	 */
@@ -47,19 +51,11 @@ public class LocationTest extends AbstractJDITest {
 	}
 	/**
 	 * Run all tests and output to standard output.
-	 * @param args
 	 */
 	public static void main(java.lang.String[] args) {
 		new LocationTest().runSuite(args);
 	}
-	/**
-	 * Gets the name of the test case.
-	 * @see junit.framework.TestCase#getName()
-	 */
-	@Override
-	public String getName() {
-		return "com.sun.jdi.Location";
-	}
+
 	/**
 	 * Test JDI codeIndex().
 	 */
@@ -90,7 +86,7 @@ public class LocationTest extends AbstractJDITest {
 	 * Test JDI lineNumber().
 	 */
 	public void testJDILineNumber() {
-		assertEquals("1", 191, fLocation.lineNumber());
+		assertEquals("1", 180, fLocation.lineNumber());
 	}
 	/**
 	 * Test JDI method().

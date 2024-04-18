@@ -25,6 +25,7 @@ import org.eclipse.jdt.debug.core.IJavaMethodBreakpoint;
 import org.eclipse.jdt.debug.core.IJavaThread;
 import org.eclipse.jdt.debug.core.IJavaWatchpoint;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
+import org.eclipse.jdt.debug.tests.TestUtil;
 
 /**
  * Test that a SUSPEND_VM breakpoint suspends all threads
@@ -33,7 +34,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Constructor
-	 * @param name
 	 */
 	public SuspendVMBreakpointsTests(String name) {
 		super(name);
@@ -41,7 +41,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that the VM is suspended when the specific line breakpoint is hit
-	 * @throws Exception
 	 */
 	public void testSuspendVmLineBreakpoint() throws Exception {
 		String typeName = "MultiThreadedLoop";
@@ -63,7 +62,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that the VM is suspended when a specific exception breakpoint is hit
-	 * @throws Exception
 	 */
 	public void testSuspendVmExceptionBreakpoint() throws Exception {
 		String typeName = "ThrowsNPE";
@@ -90,7 +88,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that the VM is suspended when a specific access watchpoint is hit
-	 * @throws Exception
 	 */
 	public void testSuspendVmAccessWatchpointBreakpoint() throws Exception {
 		String typeName = "org.eclipse.debug.tests.targets.Watchpoint";
@@ -120,7 +117,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that the VM is suspended when a specific modification watchpoint is hit
-	 * @throws Exception
 	 */
 	public void testSuspendVmModificationWatchpointBreakpoint() throws Exception {
 		String typeName = "org.eclipse.debug.tests.targets.Watchpoint";
@@ -153,7 +149,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that the VM is suspended when a specific method entry breakpoint is hit
-	 * @throws Exception
 	 */
 	public void testSuspendVmMethodEntryBreakpoint() throws Exception {
 		String typeName = "DropTests";
@@ -179,7 +174,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that the VM is suspended when a specific method exit breakpoint is hit
-	 * @throws Exception
 	 */
 	public void testSuspendVmMethodExitBreakpoint() throws Exception {
 		String typeName = "DropTests";
@@ -205,7 +199,6 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 
 	/**
 	 * Verifies that all of the threads of the related debug target are suspended
-	 * @param thread
 	 */
 	protected void verifyAllThreadsSuspended(IJavaThread thread) {
 		try {
@@ -217,5 +210,84 @@ public class SuspendVMBreakpointsTests extends AbstractDebugTest {
 		} catch (DebugException e) {
 			fail(e.getMessage());
 		}
+	}
+
+
+	/**
+	 * Tests when multiple {@code IJavaBreakpoint#SUSPEND_VM} are installed and user resumes the execution each time by selecting
+	 * {@code IJavaThread#resume()}. This is because default selection is Thread where Breakpoint is hit in Debug View. At the end Debug Target is
+	 * resumed. As User threads have completed execution Debug Target should terminate itself.
+	 *
+	 * @throws Exception
+	 */
+	public void testMultipleSuspendVmLineBreakpoints() throws Exception {
+		String typeName = "DropTests";
+		IJavaLineBreakpoint bp18 = createLineBreakpoint(18, typeName);
+		bp18.setSuspendPolicy(IJavaBreakpoint.SUSPEND_VM);
+
+		IJavaLineBreakpoint bp23 = createLineBreakpoint(23, typeName);
+		bp23.setSuspendPolicy(IJavaBreakpoint.SUSPEND_VM);
+
+		IJavaLineBreakpoint bp27 = createLineBreakpoint(27, typeName);
+		bp27.setSuspendPolicy(IJavaBreakpoint.SUSPEND_THREAD);
+
+		IJavaThread thread = null;
+		try {
+			thread = launchToLineBreakpoint(typeName, bp18);
+			verifyAllThreadsSuspended(thread);
+			IJavaDebugTarget debugTarget = (IJavaDebugTarget) thread.getDebugTarget();
+
+			// Resume thread at every breakpoint.
+			// vm is suspended at bp18.
+			thread.resume();
+			verifyAllThreadsSuspended(debugTarget, thread);
+
+			// vm is suspended at bp23.
+			thread.resume();
+			verifyAllThreadsSuspended(debugTarget, thread);
+
+			// vm is suspended at bp27.
+			thread.resume();
+			verifyAllThreadsSuspended(debugTarget, thread);
+
+			// Now resume the debug target.
+			debugTarget.resume();
+			verifyNothingIsSuspended(debugTarget);
+
+			// VM should regularly terminate execution and disconnect from target
+			assertTrue("Debug target should be disconnected", debugTarget.isDisconnected());
+
+		} finally {
+			terminateAndRemove(thread);
+			removeAllBreakpoints();
+		}
+	}
+
+	/**
+	 * Verifies that all of the threads of the given Debug Target are suspended except the one is passed
+	 */
+	protected void verifyAllThreadsSuspended(IJavaDebugTarget debugTarget, IJavaThread notSuspended) throws Exception {
+		TestUtil.waitForJobs(getName(), 50, 10000);
+		TestUtil.runEventLoop();
+		IThread[] threads = debugTarget.getThreads();
+		for (IThread thread : threads) {
+			if (thread == notSuspended) {
+				continue;
+			}
+			assertTrue("Thread wasn't suspended when a SUSPEND_VM breakpoint was hit, thread=" + thread.getName(), thread.isSuspended());
+		}
+	}
+
+	/**
+	 * Verifies that all of the threads of the given Debug Target are resumed
+	 */
+	protected void verifyNothingIsSuspended(IJavaDebugTarget debugTarget) throws Exception {
+		TestUtil.waitForJobs(getName(), 100, 10000);
+		TestUtil.runEventLoop();
+		IThread[] threads = debugTarget.getThreads();
+		for (IThread thread : threads) {
+			assertFalse("All threads should be suspended, but at least one not: thread=" + thread.getName(), thread.isSuspended());
+		}
+		assertFalse("Shouldn't be suspended", debugTarget.isSuspended());
 	}
 }

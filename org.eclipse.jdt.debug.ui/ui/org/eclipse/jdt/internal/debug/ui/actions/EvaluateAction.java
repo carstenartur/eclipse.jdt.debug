@@ -798,8 +798,6 @@ public abstract class EvaluateAction implements IEvaluationListener, IWorkbenchW
 
 	/**
 	 * Returns the selected text region, or <code>null</code> if none.
-	 *
-	 * @return
 	 */
 	protected IRegion getRegion() {
 		return fRegion;
@@ -827,10 +825,10 @@ public abstract class EvaluateAction implements IEvaluationListener, IWorkbenchW
 	}
 
 	/**
-	 * Returns an anchor point for a popup dialog on top of a styled text
-	 * or <code>null</code> if none.
+	 * Returns an anchor point for a popup dialog on top of a styled text or <code>null</code> if none.
 	 *
-	 * @param part or <code>null</code>
+	 * @param textWidget
+	 *            StyledText or <code>null</code>
 	 * @return anchor point or <code>null</code>
 	 */
 	public static Point getPopupAnchor(StyledText textWidget) {

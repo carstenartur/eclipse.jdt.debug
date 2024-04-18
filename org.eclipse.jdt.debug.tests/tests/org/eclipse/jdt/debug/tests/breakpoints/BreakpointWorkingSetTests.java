@@ -30,7 +30,6 @@ public class BreakpointWorkingSetTests extends AbstractBreakpointWorkingSetTest 
 
 	/**
 	 * Constructor
-	 * @param name
 	 */
 	public BreakpointWorkingSetTests(String name) {
 		super(name);
@@ -38,7 +37,6 @@ public class BreakpointWorkingSetTests extends AbstractBreakpointWorkingSetTest 
 
 	/**
 	 * Tests adding a breakpoint to the default working set
-	 * @throws Exception
 	 */
 	public void testAddToDefaultWorkingSet() throws Exception {
 		String name = "TEST DEFAULT";
@@ -57,7 +55,6 @@ public class BreakpointWorkingSetTests extends AbstractBreakpointWorkingSetTest 
 
 	/**
 	 * Tests adding a breakpoint with no default working set
-	 * @throws Exception
 	 */
 	public void testNoDefaultWorkingSet() throws Exception {
 		String name = "TEST DEFAULT";
@@ -74,13 +71,11 @@ public class BreakpointWorkingSetTests extends AbstractBreakpointWorkingSetTest 
 	}
 
 	/**
-	 * Tests that we can have N working set shown in the view and add additional breakpoints
-	 * to the default ones without causing exceptions
+	 * Tests that we can have N working set shown in the view and add additional breakpoints to the default ones without causing exceptions
 	 *
 	 * In this test we have to open / show the view to cause the insert update to occur
 	 *
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=380614
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=380614"
 	 * @since 3.8.100
 	 */
 	public void testInsertIntoDefaultSet() throws Exception {

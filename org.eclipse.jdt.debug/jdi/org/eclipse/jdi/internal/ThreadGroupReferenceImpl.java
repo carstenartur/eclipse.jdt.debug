@@ -30,7 +30,6 @@ import com.sun.jdi.ThreadReference;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class ThreadGroupReferenceImpl extends ObjectReferenceImpl implements
 		ThreadGroupReference {
@@ -58,7 +57,7 @@ public class ThreadGroupReferenceImpl extends ObjectReferenceImpl implements
 	}
 
 	/**
-	 * @returns Value tag.
+	 * @return Value tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -160,14 +159,16 @@ public class ThreadGroupReferenceImpl extends ObjectReferenceImpl implements
 			ChildrenInfo result = new ChildrenInfo();
 			int nrThreads = readInt("nr threads", replyData); //$NON-NLS-1$
 			result.childThreads = new ArrayList<>(nrThreads);
-			for (int i = 0; i < nrThreads; i++)
+			for (int i = 0; i < nrThreads; i++) {
 				result.childThreads.add(ThreadReferenceImpl.read(this,
 						replyData));
+			}
 			int nrThreadGroups = readInt("nr thread groups", replyData); //$NON-NLS-1$
 			result.childThreadGroups = new ArrayList<>(nrThreadGroups);
-			for (int i = 0; i < nrThreadGroups; i++)
+			for (int i = 0; i < nrThreadGroups; i++) {
 				result.childThreadGroups.add(ThreadGroupReferenceImpl.read(
 						this, replyData));
+			}
 			return result;
 		} catch (IOException e) {
 			defaultIOExceptionHandler(e);
@@ -228,11 +229,13 @@ public class ThreadGroupReferenceImpl extends ObjectReferenceImpl implements
 		VirtualMachineImpl vmImpl = target.virtualMachineImpl();
 		JdwpThreadGroupID ID = new JdwpThreadGroupID(vmImpl);
 		ID.read(in);
-		if (target.fVerboseWriter != null)
+		if (target.fVerboseWriter != null) {
 			target.fVerboseWriter.println("threadGroupReference", ID.value()); //$NON-NLS-1$
+		}
 
-		if (ID.isNull())
+		if (ID.isNull()) {
 			return null;
+		}
 
 		ThreadGroupReferenceImpl mirror = (ThreadGroupReferenceImpl) vmImpl
 				.getCachedMirror(ID);

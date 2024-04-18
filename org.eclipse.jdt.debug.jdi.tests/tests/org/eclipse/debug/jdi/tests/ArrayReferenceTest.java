@@ -39,6 +39,10 @@ public class ArrayReferenceTest extends AbstractJDITest {
 	public ArrayReferenceTest() {
 		super();
 	}
+
+	public ArrayReferenceTest(String name) {
+		super(name);
+	}
 	/**
 	 * Init the fields that are used by this test only.
 	 */
@@ -50,19 +54,11 @@ public class ArrayReferenceTest extends AbstractJDITest {
 	}
 	/**
 	 * Run all tests and output to standard output.
-	 * @param args
 	 */
 	public static void main(java.lang.String[] args) {
 		new ArrayReferenceTest().runSuite(args);
 	}
-	/**
-	 * Gets the name of the test case.
-	 * @see junit.framework.TestCase#getName()
-	 */
-	@Override
-	public String getName() {
-		return "com.sun.jdi.ArrayReference";
-	}
+
 	/**
 	 * Test JDI getValue(int), getValues(), getValues(int,int)
 	 * setValue(Value,int), setValues(List) and setValues(int,List,int,int),

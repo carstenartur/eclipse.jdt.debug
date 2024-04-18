@@ -396,9 +396,6 @@ public class ASTInstructionCompiler extends ASTVisitor {
 		}
 	}
 
-	/**
-	 *
-	 */
 	private void addPopInstruction() {
 		Instruction lastInstruction = fInstructions
 				.getInstruction(fInstructions.getEnd());
@@ -1995,8 +1992,7 @@ public class ASTInstructionCompiler extends ASTVisitor {
 	}
 
 	/**
-	 * return false, visit expression, type name & arguments, don't visit body
-	 * declaration
+	 * return false, visit expression, type name and arguments, don't visit body declaration
 	 *
 	 * @see ASTVisitor#visit(ClassInstanceCreation)
 	 */
@@ -3027,7 +3023,7 @@ public class ASTInstructionCompiler extends ASTVisitor {
 	}
 
 	/**
-	 * return false, don't visit name, visit expression & arguments
+	 * return false, don't visit name, visit expression and arguments
 	 *
 	 * @see ASTVisitor#visit(MethodInvocation)
 	 */

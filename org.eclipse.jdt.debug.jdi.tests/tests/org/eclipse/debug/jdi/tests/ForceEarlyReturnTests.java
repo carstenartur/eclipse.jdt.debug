@@ -70,7 +70,7 @@ public class ForceEarlyReturnTests extends AbstractJDITest {
 			if(tref.isSuspended()) {
 				if(tref.isAtBreakpoint()) {
 					method = getMethod("printNumber", "(Ljava/io/OutputStream;I)I");
-					br = getBreakpointRequest(method.locationsOfLine(207).get(0));
+					br = getBreakpointRequest(method.locationsOfLine(196).get(0));
 					br.setSuspendPolicy(EventRequest.SUSPEND_EVENT_THREAD);
 					br.enable();
 					waiter = new EventWaiter(br, true);
@@ -85,7 +85,6 @@ public class ForceEarlyReturnTests extends AbstractJDITest {
 					System.out.println(val);
 					assertTrue("value should be a StringReference", val instanceof StringReference);
 					fEventReader.removeEventListener(waiter);
-					//TODO make sure this works with the newest versions of the 1.6VM
 					assertEquals("values should be 'foobar'", "foobar", ((StringReference) val).value());
 				}
 			}

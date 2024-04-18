@@ -636,8 +636,7 @@ public class JavaSnippetEditor extends AbstractDecoratedTextEditor implements ID
 		Runnable r= new Runnable() {
 			@Override
 			public void run() {
-				Shell shell= getShell();
-				if (JavaSnippetEditor.this.fSnippetStateListeners != null && shell != null && !shell.isDisposed()) {
+				if (JavaSnippetEditor.this.fSnippetStateListeners != null) {
 					for (ISnippetStateChangedListener listener : new ArrayList<>(JavaSnippetEditor.this.fSnippetStateListeners)) {
 						listener.snippetStateChanged(JavaSnippetEditor.this);
 					}
@@ -820,8 +819,6 @@ public class JavaSnippetEditor extends AbstractDecoratedTextEditor implements ID
 	 * @param value object or primitive data type the 'toString'
 	 *  is required for
 	 * @return the result of evaluating toString
-	 * @exception DebugException if an exception occurs during the
-	 *  evaluation.
 	 */
 	protected synchronized String evaluateToString(IJavaValue value) {
 		this.fResult= null;

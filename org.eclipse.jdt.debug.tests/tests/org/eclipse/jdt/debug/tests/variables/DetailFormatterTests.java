@@ -49,9 +49,6 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	TestListener fListener = new TestListener();
 
-	/**
-	 * @param name
-	 */
 	public DetailFormatterTests(String name) {
 		super(name);
 	}
@@ -69,8 +66,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from a large compound expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testCompoundDetails1() throws Exception {
 		IJavaThread thread = null;
@@ -119,8 +115,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from a small compound expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testCompoundDetails2() throws Exception {
 		IJavaThread thread = null;
@@ -156,8 +151,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from a small compound expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testSimpleDetails1() throws Exception {
 		IJavaThread thread = null;
@@ -191,8 +185,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from a small compound expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testSimpleDetails2() throws Exception {
 		IJavaThread thread = null;
@@ -226,8 +219,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from an infix expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testInfixDetails1() throws Exception {
 		IJavaThread thread = null;
@@ -263,8 +255,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from an infix expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testInfixDetails2() throws Exception {
 		IJavaThread thread = null;
@@ -299,8 +290,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 
 	/**
 	 * Tests a detail formatter made from an infix expression
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=403028"
 	 */
 	public void testInfixDetails3() throws Exception {
 		IJavaThread thread = null;
@@ -336,8 +326,7 @@ public class DetailFormatterTests extends AbstractDebugTest {
 	/**
 	 * Tests a detail formatter made from an collection with no type arguments
 	 *
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=484686
-	 * @throws Exception
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=484686"
 	 */
 	public void testHoverWithNoTypeArguments() throws Exception {
 		IJavaThread thread = null;

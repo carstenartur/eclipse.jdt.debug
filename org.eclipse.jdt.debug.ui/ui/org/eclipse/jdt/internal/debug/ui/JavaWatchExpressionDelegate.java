@@ -35,16 +35,13 @@ import org.eclipse.jdt.internal.debug.core.JavaDebugUtils;
 import org.eclipse.jdt.internal.debug.core.model.JDIThread;
 import org.eclipse.jdt.internal.debug.ui.display.JavaInspectExpression;
 
-/**
- *
- */
 public class JavaWatchExpressionDelegate implements IWatchExpressionDelegate {
 
 	private String fExpressionText;
 	private IWatchExpressionListener fListener;
 
 	/**
-	 * @see org.eclipse.debug.core.model.IWatchExpressionDelegate#getValue(java.lang.String, org.eclipse.debug.core.model.IDebugElement)
+	 * @see org.eclipse.debug.core.model.IWatchExpressionDelegate#evaluateExpression(String, IDebugElement, IWatchExpressionListener)
 	 */
 	@Override
 	public void evaluateExpression(String expression, IDebugElement context, IWatchExpressionListener listener) {

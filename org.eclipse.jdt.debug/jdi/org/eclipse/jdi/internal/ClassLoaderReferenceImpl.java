@@ -31,7 +31,6 @@ import com.sun.jdi.ReferenceType;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class ClassLoaderReferenceImpl extends ObjectReferenceImpl implements ClassLoaderReference {
 	/** JDWP Tag. */
@@ -46,7 +45,7 @@ public class ClassLoaderReferenceImpl extends ObjectReferenceImpl implements Cla
 	}
 
 	/**
-	 * @returns Value tag.
+	 * @return Value tag.
 	 */
 	@Override
 	public byte getTag() {
@@ -54,7 +53,7 @@ public class ClassLoaderReferenceImpl extends ObjectReferenceImpl implements Cla
 	}
 
 	/**
-	 * @returns Returns a list of all loaded classes that were defined by this
+	 * @return Returns a list of all loaded classes that were defined by this
 	 *          class loader.
 	 */
 	@Override

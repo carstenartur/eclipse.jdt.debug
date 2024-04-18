@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2023 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -12,6 +12,7 @@
  *     IBM Corporation - initial API and implementation
  *     Frits Jalvingh - Contribution for Bug 459831 - [launching] Support attaching
  *     	external annotations to a JRE container
+ *     Ole Osterhagen - Issue 327 - Attribute "Without test code" is ignored in the launcher
  *******************************************************************************/
 package org.eclipse.jdt.launching;
 
@@ -1232,7 +1233,9 @@ public final class JavaRuntime {
 						return new IRuntimeClasspathEntry[0];
 					}
 					IClasspathAttribute[] attributes = entry.getClasspathEntry().getExtraAttributes();
-					IRuntimeClasspathEntry[] entries = resolveOutputLocations(project, entry.getClasspathProperty(), attributes, excludeTestCode);
+					boolean withoutTestCode = entry.getClasspathEntry().isWithoutTestCode();
+					IRuntimeClasspathEntry[] entries = resolveOutputLocations(project, entry.getClasspathProperty(), attributes, excludeTestCode
+							|| withoutTestCode);
 					if (entries != null) {
 						return entries;
 					}
@@ -1477,7 +1480,9 @@ public final class JavaRuntime {
 					IJavaProject jp = JavaCore.create(p);
 					if (jp != null && p.isOpen() && jp.exists()) {
 						IClasspathAttribute[] attributes = entry.getClasspathEntry().getExtraAttributes();
-						IRuntimeClasspathEntry[] entries = resolveOutputLocations(jp, entry.getClasspathProperty(), attributes, excludeTestCode);
+						boolean withoutTestCode = entry.getClasspathEntry().isWithoutTestCode();
+						IRuntimeClasspathEntry[] entries = resolveOutputLocations(jp, entry.getClasspathProperty(), attributes, excludeTestCode
+								|| withoutTestCode);
 						if (entries != null) {
 							return entries;
 						}
@@ -1697,7 +1702,6 @@ public final class JavaRuntime {
 	 * @param project
 	 *            Java project
 	 * @return the {@link IPackageFragmentRoot} for the JRE container or null if no JRE container is on the classpath
-	 * @throws JavaModelException
 	 */
 	private static IPackageFragmentRoot findJreContainer(IJavaProject project) throws JavaModelException {
 		IPackageFragmentRoot jreContainer = null;
@@ -3366,8 +3370,11 @@ public final class JavaRuntime {
 				} else if (javaVersion.startsWith(JavaCore.VERSION_21)
 						&& (javaVersion.length() == JavaCore.VERSION_21.length() || javaVersion.charAt(JavaCore.VERSION_21.length()) == '.')) {
 					compliance = JavaCore.VERSION_21;
+				} else if (javaVersion.startsWith(JavaCore.VERSION_22)
+						&& (javaVersion.length() == JavaCore.VERSION_22.length() || javaVersion.charAt(JavaCore.VERSION_22.length()) == '.')) {
+					compliance = JavaCore.VERSION_22;
 				} else {
-					compliance = JavaCore.VERSION_21; // use latest by default
+					compliance = JavaCore.VERSION_22; // use latest by default
 				}
 
             	Hashtable<String, String> options= JavaCore.getOptions();

@@ -19,7 +19,6 @@ import com.sun.jdi.Value;
 /**
  * this class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public class FloatTypeImpl extends PrimitiveTypeImpl implements FloatType {
 	/**
@@ -30,7 +29,7 @@ public class FloatTypeImpl extends PrimitiveTypeImpl implements FloatType {
 	}
 
 	/**
-	 * @returns primitive type tag.
+	 * @return primitive type tag.
 	 */
 	@Override
 	public byte tag() {

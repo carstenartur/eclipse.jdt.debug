@@ -76,25 +76,18 @@ public class ClasspathContainerTests extends AbstractDebugTest {
 			return new Path(JavaRuntime.JRE_CONTAINER);
 		}
 
-		/**
-		 * @param cpe
-		 */
 		public void setEntries(IClasspathEntry[] cpe) {
 			entries = cpe;
 		}
 
 	}
 
-	/**
-	 * @param name
-	 */
 	public ClasspathContainerTests(String name) {
 		super(name);
 	}
 
 	/**
 	 * Tests that the container will accept an update
-	 * @throws CoreException
 	 */
 	public void testCanUpdate() throws CoreException {
 		// Create a new VM install that mirrors the current install
@@ -151,8 +144,6 @@ public class ClasspathContainerTests extends AbstractDebugTest {
 
 	/**
 	 * Tests library comparison case sensitivity.
-	 *
-	 * @throws CoreException
 	 */
 	public void testLibraryCaseSensitivity() {
 		IVMInstall def = JavaRuntime.getDefaultVMInstall();
@@ -180,7 +171,7 @@ public class ClasspathContainerTests extends AbstractDebugTest {
 	/**
 	 * Tests that an index can be added to a {@link LibraryLocation}
 	 *
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=399098
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=399098"
 	 * @since 3.8.100
 	 */
 	public void testJREContainerIndex() throws Exception {
@@ -222,10 +213,10 @@ public class ClasspathContainerTests extends AbstractDebugTest {
 	}
 
 	/**
-	 * Tests that an index can be added to a {@link LibraryLocation} and that successive calls to
-	 * {@link JavaRuntime#getLibraryLocations(IVMInstall)} does not erase the index infos
+	 * Tests that an index can be added to a {@link LibraryLocation} and that successive calls to {@link JavaRuntime#getLibraryLocations(IVMInstall)}
+	 * does not erase the index infos
 	 *
-	 * @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=399098
+	 * @see "https://bugs.eclipse.org/bugs/show_bug.cgi?id=399098"
 	 * @since 3.8.100
 	 */
 	public void testJREContainerIndex2() throws Exception {

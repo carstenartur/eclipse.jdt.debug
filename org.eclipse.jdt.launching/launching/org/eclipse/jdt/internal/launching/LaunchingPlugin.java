@@ -664,18 +664,17 @@ public class LaunchingPlugin extends Plugin implements DebugOptionsListener, IEc
 	}
 
 	/**
-	 * Check for differences between the old & new sets of installed JREs.
-	 * Differences may include additions, deletions and changes.  Take
+	 * Check for differences between the old and new sets of installed JREs. Differences may include additions, deletions and changes. Take
 	 * appropriate action for each type of difference.
 	 *
-	 * When importing preferences, TWO propertyChange events are fired.  The first
-	 * has an old value but an empty new value.  The second has a new value, but an empty
-	 * old value.  Normal user changes to the preferences result in a single propertyChange
-	 * event, with both old and new values populated.  This method handles both types
-	 * of notification.
+	 * When importing preferences, TWO propertyChange events are fired. The first has an old value but an empty new value. The second has a new value,
+	 * but an empty old value. Normal user changes to the preferences result in a single propertyChange event, with both old and new values populated.
+	 * This method handles both types of notification.
 	 *
-	 * @param oldValue the old preference value
-	 * @param newValue the new preference value
+	 * @param oldValue
+	 *            the old preference value
+	 * @param newValue
+	 *            the new preference value
 	 */
 	protected void processVMPrefsChanged(String oldValue, String newValue) {
 
@@ -946,7 +945,8 @@ public class LaunchingPlugin extends Plugin implements DebugOptionsListener, IEc
 		File file = libPath.toFile();
 		if (file.exists()) {
 			try (InputStream stream = new BufferedInputStream(new FileInputStream(file))) {
-				DocumentBuilder parser = XmlProcessorFactoryJdtDebug.createDocumentBuilderWithErrorOnDOCTYPE();
+				@SuppressWarnings("restriction")
+				DocumentBuilder parser = org.eclipse.core.internal.runtime.XmlProcessorFactory.createDocumentBuilderWithErrorOnDOCTYPE();
 				parser.setErrorHandler(new DefaultHandler());
 				Element root = parser.parse(new InputSource(stream)).getDocumentElement();
 				if(!root.getNodeName().equals("libraryInfos")) { //$NON-NLS-1$
@@ -1039,7 +1039,8 @@ public class LaunchingPlugin extends Plugin implements DebugOptionsListener, IEc
 		File file = libPath.toFile();
 		if (file.exists()) {
 			try (InputStream stream = new BufferedInputStream(new FileInputStream(file))) {
-				DocumentBuilder parser = XmlProcessorFactoryJdtDebug.createDocumentBuilderWithErrorOnDOCTYPE();
+				@SuppressWarnings("restriction")
+				DocumentBuilder parser = org.eclipse.core.internal.runtime.XmlProcessorFactory.createDocumentBuilderWithErrorOnDOCTYPE();
 				parser.setErrorHandler(new DefaultHandler());
 				Element root = parser.parse(new InputSource(stream)).getDocumentElement();
 				if(root.getNodeName().equalsIgnoreCase("dirs")) { //$NON-NLS-1$
@@ -1227,8 +1228,10 @@ public class LaunchingPlugin extends Plugin implements DebugOptionsListener, IEc
 	public static DocumentBuilder getParser() throws CoreException {
 		if (fgXMLParser == null) {
 			try {
-				fgXMLParser = XmlProcessorFactoryJdtDebug.createDocumentBuilderWithErrorOnDOCTYPE();
-				fgXMLParser.setErrorHandler(new DefaultHandler());
+				@SuppressWarnings("restriction")
+				DocumentBuilder p = org.eclipse.core.internal.runtime.XmlProcessorFactory.createDocumentBuilderWithErrorOnDOCTYPE();
+				p.setErrorHandler(new DefaultHandler());
+				fgXMLParser = p;
 			} catch (ParserConfigurationException e) {
 				abort(LaunchingMessages.LaunchingPlugin_34, e);
 			} catch (FactoryConfigurationError e) {

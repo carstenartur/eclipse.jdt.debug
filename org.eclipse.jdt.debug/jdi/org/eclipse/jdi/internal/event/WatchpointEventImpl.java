@@ -30,7 +30,6 @@ import com.sun.jdi.event.WatchpointEvent;
 /**
  * This class implements the corresponding interfaces declared by the JDI
  * specification. See the com.sun.jdi package for more information.
- *
  */
 public abstract class WatchpointEventImpl extends LocatableEventImpl implements
 		WatchpointEvent {
@@ -48,8 +47,7 @@ public abstract class WatchpointEventImpl extends LocatableEventImpl implements
 	}
 
 	/**
-	 * @return Creates, reads and returns new EventImpl, of which requestID has
-	 *         already been read.
+	 * Creates, reads new EventImpl, of which requestID has already been read.
 	 */
 	public void readWatchpointEventFields(MirrorImpl target,
 			DataInputStream dataInStream) throws IOException {
@@ -81,8 +79,9 @@ public abstract class WatchpointEventImpl extends LocatableEventImpl implements
 	@Override
 	public Value valueCurrent() {
 		// Note: if field is static, fObjectReference will be null.
-		if (fObjectReference == null)
+		if (fObjectReference == null) {
 			return fField.declaringType().getValue(fField);
+		}
 		return fObjectReference.getValue(fField);
 	}
 }

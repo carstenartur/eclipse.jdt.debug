@@ -368,7 +368,7 @@ public class JavaLineBreakpoint extends JavaBreakpoint implements
 	}
 
 	/**
-	 * @see JavaBreakpoint#setRequestThreadFilter(EventRequest)
+	 * @see JavaBreakpoint#setRequestThreadFilter(EventRequest, ThreadReference)
 	 */
 	@Override
 	protected void setRequestThreadFilter(EventRequest request,
@@ -430,7 +430,6 @@ public class JavaLineBreakpoint extends JavaBreakpoint implements
 	 * <li>IMarker.CHAR_START</li>
 	 * <li>IMarker.CHAR_END</li>
 	 * </ol>
-	 *
 	 */
 	public void addLineBreakpointAttributes(Map<String, Object> attributes,
 			String modelIdentifier, boolean enabled, int lineNumber,

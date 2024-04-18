@@ -16,8 +16,6 @@ package org.eclipse.jdt.debug.tests.launching;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import junit.framework.AssertionFailedError;
-
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
@@ -46,6 +44,8 @@ import org.eclipse.jdt.debug.ui.launchConfigurations.JavaMainTab;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.ui.JavaUI;
 
+import junit.framework.AssertionFailedError;
+
 /**
  * LaunchModeTests
  */
@@ -54,18 +54,12 @@ public class LaunchModeTests extends AbstractDebugTest {
 	private ILaunchConfiguration fConfiguration;
 	private String fMode;
 
-	/**
-	 * @param name
-	 */
 	public LaunchModeTests(String name) {
 		super(name);
 	}
 
 	/**
 	 * Called by launch "TestModeLaunchDelegate" delegate when launch method invoked.
-	 *
-	 * @param configuration
-	 * @param mode
 	 */
 	public synchronized void launch(ILaunchConfiguration configuration, String mode) {
 		fConfiguration = configuration;
@@ -77,7 +71,6 @@ public class LaunchModeTests extends AbstractDebugTest {
 	 * Tests that launch delegate for "TEST_MODE" and Java applications is invoked when
 	 * "TEST_MODE" is used.
 	 *
-	 * @throws CoreException
 	 * @see TestModeLaunchDelegate
 	 */
 	public void testContributedLaunchMode() throws CoreException {
@@ -136,9 +129,6 @@ public class LaunchModeTests extends AbstractDebugTest {
 
 	/**
 	 * Asserts that the array contains the given object
-	 * @param message
-	 * @param array
-	 * @param object
 	 */
 	static public void assertContains(String message, Object[] array, Object object) {
 		for (int i = 0; i < array.length; i++) {
@@ -151,7 +141,6 @@ public class LaunchModeTests extends AbstractDebugTest {
 
 	/**
 	 * Ensure our contributed mode is supported.
-	 * @throws CoreException
 	 */
 	public void testSupportsMode() throws CoreException {
 		ILaunchConfiguration configuration = getLaunchConfiguration("Breakpoints"); //$NON-NLS-1$
@@ -168,7 +157,6 @@ public class LaunchModeTests extends AbstractDebugTest {
 
 	/**
 	 * Tests that mode specific tab group contributions work.
-	 * @throws CoreException
 	 */
 	public void testModeSpecificTabGroups() throws CoreException {
 		ILaunchConfigurationType javaType = getLaunchManager().getLaunchConfigurationType(IJavaLaunchConfigurationConstants.ID_JAVA_APPLICATION);
@@ -390,8 +378,7 @@ public class LaunchModeTests extends AbstractDebugTest {
 	}
 
 	/**
-	 * Tests that the default launch perspective for the 'run' modeset and java launch delegate
-	 * is <code>null/code> using the new API
+	 * Tests that the default launch perspective for the 'run' modeset and java launch delegate is <code>null</code> using the new API
 	 *
 	 * @since 3.3
 	 */

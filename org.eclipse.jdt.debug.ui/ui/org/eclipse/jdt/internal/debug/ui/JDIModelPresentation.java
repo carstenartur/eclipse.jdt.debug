@@ -180,12 +180,10 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 	}
 
 	/**
-	 * Returns a thread from the specified VM that can be
-	 * used for an evaluation or <code>null</code> if
-	 * none.
+	 * Returns a thread from the specified VM that can be used for an evaluation or <code>null</code> if none.
 	 *
-	 * @param debug target the target in which a thread is
-	 * 	required
+	 * @param target
+	 *            the target in which a thread is required
 	 * @return thread or <code>null</code>
 	 */
 	public static IJavaThread getEvaluationThread(IJavaDebugTarget target) {
@@ -704,10 +702,10 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 
 		try {
 			if (item instanceof JDIReferenceListVariable) {
-				return getReferencesImage(item);
+				return getReferencesImage();
 			}
 			if (item instanceof JDIReferenceListEntryVariable){
-				return getReferenceImage(item);
+				return getReferenceImage();
 			}
 			if (item instanceof IJavaVariable) {
 				return getVariableImage((IAdaptable) item);
@@ -773,10 +771,6 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 		}
 	}
 
-	/**
-	 * @param thread
-	 * @return
-	 */
 	private Image getJavaWaitingThreadImage(JavaWaitingThread thread) {
 		JDIImageDescriptor descriptor;
 		int flag= JDIImageDescriptor.IN_CONTENTION_FOR_MONITOR | (thread.getThread().isInDeadlock() ? JDIImageDescriptor.IN_DEADLOCK : 0);
@@ -788,10 +782,6 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 		return getDebugImageRegistry().get(descriptor);
 	}
 
-	/**
-	 * @param thread
-	 * @return
-	 */
 	private Image getJavaOwningThreadImage(JavaOwningThread thread) {
 		JDIImageDescriptor descriptor;
 		int flag= JDIImageDescriptor.OWNS_MONITOR | (thread.getThread().isInDeadlock() ? JDIImageDescriptor.IN_DEADLOCK : 0);
@@ -803,10 +793,6 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 		return getDebugImageRegistry().get(descriptor);
 	}
 
-	/**
-	 * @param monitor
-	 * @return
-	 */
 	private Image getJavaContendedMonitorImage(JavaContendedMonitor monitor) {
 		int flag= monitor.getMonitor().isInDeadlock() ? JDIImageDescriptor.IN_DEADLOCK : 0;
 		JDIImageDescriptor descriptor= new JDIImageDescriptor(
@@ -814,10 +800,6 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 		return getDebugImageRegistry().get(descriptor);
 	}
 
-	/**
-	 * @param monitor
-	 * @return
-	 */
 	private Image getJavaOwnedMonitorImage(JavaOwnedMonitor monitor) {
 		int flag= monitor.getMonitor().isInDeadlock() ? JDIImageDescriptor.IN_DEADLOCK : 0;
 		JDIImageDescriptor descriptor= new JDIImageDescriptor(getImageDescriptor(JavaDebugImages.IMG_OBJS_OWNED_MONITOR), flag);
@@ -952,10 +934,9 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 	 * Returns the image associated with reference variables being used to display
 	 * references to a root object.
 	 *
-	 * @param element
 	 * @return image associated with reference variables
 	 */
-	protected Image getReferencesImage(Object element){
+	private Image getReferencesImage() {
 		return JavaDebugImages.get(JavaDebugImages.IMG_ELCL_ALL_REFERENCES);
 	}
 
@@ -963,10 +944,9 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 	 * Returns the image associated with reference variables being used to display
 	 * references to a root object.
 	 *
-	 * @param element
 	 * @return image associated with reference variables
 	 */
-	protected Image getReferenceImage(Object element){
+	private Image getReferenceImage() {
 		return JavaDebugImages.get(JavaDebugImages.IMG_OBJS_REFERENCE);
 	}
 
@@ -1341,7 +1321,6 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 	 * Returns text for the given value based on user preferences to display
 	 * toString() details.
 	 *
-	 * @param javaValue
 	 * @return text
 	 */
 	public String getFormattedValueText(IJavaValue javaValue) {
@@ -1363,11 +1342,11 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 	}
 
 	/**
-	 * Returns whether or not details should be shown in the
-	 * label of the given variable.
-	 * @param variable the variable
-	 * @return whether or not details should be shown in the label
-	 *  of the given variable
+	 * Returns whether or not details should be shown in the label of the given variable.
+	 *
+	 * @param value
+	 *            the variable
+	 * @return whether or not details should be shown in the label of the given variable
 	 */
 	public boolean isShowLabelDetails(IJavaValue value) {
 		boolean showDetails= false;
@@ -1609,10 +1588,6 @@ public class JDIModelPresentation extends LabelProvider implements IDebugModelPr
 	    }
 	}
 
-	/**
-	 * @param breakpoint
-	 * @return
-	 */
 	private String getJavaStratumLineBreakpointText(IJavaStratumLineBreakpoint breakpoint) throws CoreException {
 		IMember member= BreakpointUtils.getMember(breakpoint);
 		String sourceName = breakpoint.getSourceName();

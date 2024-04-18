@@ -24,7 +24,6 @@ import org.eclipse.jdt.debug.eval.IAstEvaluationEngine;
 import org.eclipse.jdt.debug.eval.IEvaluationListener;
 import org.eclipse.jdt.debug.eval.IEvaluationResult;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestAgainException;
 
 /**
  * Tests that arrays can be accessed with *big* Integers
@@ -104,8 +103,6 @@ public class TestIntegerAccessUnboxing15 extends AbstractDebugTest {
 
 	/**
 	 * Test a row can be accessed
-	 *
-	 * @throws Exception
 	 */
 	public void testRowAccess() throws Exception {
 		doAccessTest("matrix[Integer.valueOf(0)][0]", 1);
@@ -113,8 +110,6 @@ public class TestIntegerAccessUnboxing15 extends AbstractDebugTest {
 
 	/**
 	 * Test a column can be accessed.
-	 *
-	 * @throws Exception
 	 */
 	public void testColumnAccess() throws Exception {
 		doAccessTest("matrix[2][Integer.valueOf(2)]", 9);

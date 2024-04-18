@@ -35,7 +35,6 @@ import org.eclipse.osgi.util.NLS;
  * @since 3.3
  * @see VariableContentProvider
  * @see IJavaVariable
- * @see JavaVariableAdapterFactory
  * @see JavaExpressionContentProvider
  */
 public class JavaVariableContentProvider extends VariableContentProvider {
@@ -108,7 +107,6 @@ public class JavaVariableContentProvider extends VariableContentProvider {
 	 *
 	 * @param parent element to display references as a child for
 	 * @return whether to display references as a child of the given parent
-	 * @throws DebugException
 	 */
 	public static boolean displayReferencesAsChild(Object parent) throws DebugException{
 		// Note, this method is used by the JavaExpressionContentProvider as well as the JavaVariableContentProvider

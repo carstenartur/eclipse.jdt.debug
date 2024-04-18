@@ -49,7 +49,6 @@ import org.eclipse.jdt.debug.core.IJavaStackFrame;
 import org.eclipse.jdt.debug.core.IJavaThread;
 import org.eclipse.jdt.internal.launching.LaunchingMessages;
 import org.eclipse.jdt.internal.launching.LaunchingPlugin;
-import org.eclipse.jdt.internal.launching.XmlProcessorFactoryJdtDebug;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.IRuntimeClasspathEntry;
 import org.eclipse.jdt.launching.JavaRuntime;
@@ -411,8 +410,9 @@ public class JavaSourceLocator implements IPersistableSourceLocator {
 		Exception ex = null;
 		try {
 			Element root = null;
+			@SuppressWarnings("restriction")
 			DocumentBuilder parser =
-					XmlProcessorFactoryJdtDebug.createDocumentBuilderWithErrorOnDOCTYPE();
+					org.eclipse.core.internal.runtime.XmlProcessorFactory.createDocumentBuilderWithErrorOnDOCTYPE();
 			parser.setErrorHandler(new DefaultHandler());
 			StringReader reader = new StringReader(memento);
 			InputSource source = new InputSource(reader);
@@ -447,10 +447,8 @@ public class JavaSourceLocator implements IPersistableSourceLocator {
 
 						IJavaSourceLocation location = null;
 						try {
-							location = (IJavaSourceLocation)clazz.newInstance();
-						} catch (IllegalAccessException e) {
-							abort(LaunchingMessages.JavaSourceLocator_Unable_to_restore_source_location__12, e);
-						} catch (InstantiationException e) {
+							location = (IJavaSourceLocation) clazz.getDeclaredConstructor().newInstance();
+						} catch (Exception e) {
 							abort(LaunchingMessages.JavaSourceLocator_Unable_to_restore_source_location__12, e);
 						}
 						location.initializeFrom(data);

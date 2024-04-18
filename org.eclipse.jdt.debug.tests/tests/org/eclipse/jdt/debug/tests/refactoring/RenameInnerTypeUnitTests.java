@@ -36,14 +36,6 @@ public class RenameInnerTypeUnitTests extends AbstractRefactoringDebugTest {
 		super(name);
 	}
 
-	/**
-	 * @param src
-	 * @param pack
-	 * @param cunit
-	 * @param fullTargetName
-	 * @param targetLineage
-	 * @throws Exception
-	 */
 	private void runClassLoadBreakpointTest(String src, String pack, String cunit, String fullTargetName, String targetLineage) throws Exception {
 		try {
 			//create breakpoint to test
@@ -64,15 +56,6 @@ public class RenameInnerTypeUnitTests extends AbstractRefactoringDebugTest {
 		}
 	}
 
-	/**
-	 * @param src
-	 * @param pack
-	 * @param cunit
-	 * @param fullTargetName
-	 * @param targetLineage
-	 * @param lineNumber
-	 * @throws Exception
-	 */
 	private void runLineBreakpointTest(String src, String pack, String cunit, String fullTargetName, String targetLineage, int lineNumber) throws Exception {
 		try {
 			//create breakpoint to test
@@ -94,15 +77,6 @@ public class RenameInnerTypeUnitTests extends AbstractRefactoringDebugTest {
 		}
 	}
 
-	/**
-	 * @param src
-	 * @param pack
-	 * @param cunit
-	 * @param fullTargetName
-	 * @param targetLineage
-	 * @param methodName
-	 * @throws Exception
-	 */
 	private void runMethodBreakpointTest(String src, String pack, String cunit, String fullTargetName, String targetLineage, String methodName) throws Exception {
 		try {
 			//create breakpoint to test
@@ -124,15 +98,6 @@ public class RenameInnerTypeUnitTests extends AbstractRefactoringDebugTest {
 		}
 	}
 
-	/**
-	 * @param src
-	 * @param pack
-	 * @param cunit
-	 * @param fullTargetName
-	 * @param targetLineage
-	 * @param fieldName
-	 * @throws Exception
-	 */
 	private void runWatchPointTest(String src, String pack, String cunit, String fullTargetName, String targetLineage, String fieldName) throws Exception {
 		try {
 			//create breakpoint to test
@@ -156,20 +121,16 @@ public class RenameInnerTypeUnitTests extends AbstractRefactoringDebugTest {
 
 	/**
 	 *
-	 * @param root
-	 * @param packageName
-	 * @param cuName
 	 * @param type TODO
-	 * @return
-	 * @throws Exception
 	 */
 	private Refactoring setupRefactor(String root, String packageName, String cuName, String type) throws Exception {
 		IJavaProject javaProject = get14Project();
 		ICompilationUnit cunit = getCompilationUnit(javaProject, root, packageName, cuName);
 		IMember target = getMember(cunit, type);
 		//if this was a non-typed test, get's it's parent type
-		if(!(target instanceof IType))
+		if(!(target instanceof IType)) {
 			target = (IMember)target.getParent();
+		}
 
 		IType targetType = (IType)target;
 		JavaRenameProcessor proc = new RenameTypeProcessor(targetType);
@@ -232,13 +193,7 @@ public class RenameInnerTypeUnitTests extends AbstractRefactoringDebugTest {
 
 
 	/**
-	 * Creates an exception breakpoint and adds a filter. Refactors & checks
-	 * if the filter changed appropriately w/ the refactor.
-	 * @param src
-	 * @param pack
-	 * @param cunit
-	 * @param targetName
-	 * @throws Exception
+	 * Creates an exception breakpoint and adds a filter. Refactors and checks if the filter changed appropriately w/ the refactor.
 	 */
 	protected void runExceptionBreakpointTest(String src, String pack, String cunit, String targetName, String exceptionName) throws Exception {
 		try {
