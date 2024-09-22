@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2022 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -16,6 +16,7 @@ package org.eclipse.debug.jdi.tests;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import org.eclipse.debug.jdi.tests.program.MainClass;
 import org.eclipse.jdi.Bootstrap;
 import org.eclipse.jdi.internal.VirtualMachineImpl;
 
@@ -119,7 +121,17 @@ public abstract class AbstractJDITest extends TestCase {
 	static {
 		fTargetAddress = System.getProperty("java.home");
 		fVMLauncherName = "DefaultVMLauncher";
-		fClassPath = new File("./bin").getAbsolutePath();
+		try {
+			String cp = MainClass.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+			System.out.println("MainClass path=" + cp);
+			if (new File(cp).isDirectory() && !cp.endsWith(File.separatorChar + "bin" + File.separatorChar)
+					&& new File(cp + "bin" + File.separatorChar).isDirectory()) {
+				cp += "bin" + File.separatorChar;
+			}
+			fClassPath = new File(cp).getAbsolutePath();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException(e);
+		}
 		fBootPath = "";
 		fVMType = "?";
 	}
@@ -739,8 +751,7 @@ public abstract class AbstractJDITest extends TestCase {
 
 			commandLine.add("-classpath");
 			commandLine.add(fClassPath);
-			commandLine.add("-Xdebug");
-			commandLine.add("-Xnoagent");
+			addDebugOptions(commandLine);
 			commandLine.add("-Djava.compiler=NONE");
 			commandLine.add("-Xrunjdwp:transport=dt_socket,address=" + fBackEndPort + ",suspend=y,server=y");
 			injectVMArgs(commandLine);
@@ -783,8 +794,7 @@ public abstract class AbstractJDITest extends TestCase {
 			}
 			commandLine.add("-classpath");
 			commandLine.add(fClassPath);
-			commandLine.add("-Xdebug");
-			commandLine.add("-Xnoagent");
+			addDebugOptions(commandLine);
 			commandLine.add("-Djava.compiler=NONE");
 			commandLine.add("-Xrunjdwp:transport=dt_socket,address=" + fBackEndPort + ",suspend=y,server=y");
 			injectVMArgs(commandLine);
@@ -818,8 +828,7 @@ public abstract class AbstractJDITest extends TestCase {
 
 			commandLine.add("-classpath");
 			commandLine.add(fClassPath);
-			commandLine.add("-Xdebug");
-			commandLine.add("-Xnoagent");
+			addDebugOptions(commandLine);
 			commandLine.add("-Djava.compiler=NONE");
 			commandLine.add("-Xrunjdwp:transport=dt_socket,address=" + fBackEndPort + ",suspend=y,server=y");
 			injectVMArgs(commandLine);
@@ -832,6 +841,26 @@ public abstract class AbstractJDITest extends TestCase {
 		}
 	}
 
+	private void addDebugOptions(Vector<String> commandLine) {
+		int vmVersion = 0;
+		try {
+			String versionString = System.getProperty("java.specification.version");
+			if (versionString != null) {
+				String[] nums = versionString.split("\\.");
+				if (nums.length > 0) {
+					vmVersion = Integer.parseInt(nums[0]);
+				}
+			}
+		} catch (Exception e) {
+			// Ignore
+		}
+		if (vmVersion < 22) {
+			commandLine.add("-Xdebug");
+		}
+		if (vmVersion < 23) {
+			commandLine.add("-Xnoagent");
+		}
+	}
 	protected String getMainClassName() {
 		return "org.eclipse.debug.jdi.tests.program.MainClass";
 	}
@@ -969,7 +998,7 @@ public abstract class AbstractJDITest extends TestCase {
 			vmLauncherName = "DefaultVMLauncher";
 		}
 
-		String classPath = new File("./bin").getAbsolutePath();
+		String classPath = fClassPath;
 		String bootPath = "";
 		String vmType = "?";
 		boolean verbose = false;
@@ -1208,7 +1237,7 @@ public abstract class AbstractJDITest extends TestCase {
 			fConsoleErrorReader =
 				new NullConsoleReader(
 					"JDI Tests Console Error Reader",
-							fLaunchedVM.getErrorStream(), System.err);
+							fLaunchedVM.getErrorStream(), System.out);
 		}
 		fConsoleErrorReader.start();
 
@@ -1240,7 +1269,7 @@ public abstract class AbstractJDITest extends TestCase {
 			fProxyErrorReader =
 				new NullConsoleReader(
 					"JDI Tests Proxy Error Reader",
-							fLaunchedProxy.getErrorStream(), System.err);
+							fLaunchedProxy.getErrorStream(), System.out);
 		}
 		fProxyErrorReader.start();
 	}
