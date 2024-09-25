@@ -752,7 +752,7 @@ public abstract class AbstractJDITest extends TestCase {
 			commandLine.add("-classpath");
 			commandLine.add(fClassPath);
 			addDebugOptions(commandLine);
-			commandLine.add("-Djava.compiler=NONE");
+			addNoJITCompilerOption(commandLine);
 			commandLine.add("-Xrunjdwp:transport=dt_socket,address=" + fBackEndPort + ",suspend=y,server=y");
 			injectVMArgs(commandLine);
 			commandLine.add(getMainClassName());
@@ -795,7 +795,7 @@ public abstract class AbstractJDITest extends TestCase {
 			commandLine.add("-classpath");
 			commandLine.add(fClassPath);
 			addDebugOptions(commandLine);
-			commandLine.add("-Djava.compiler=NONE");
+			addNoJITCompilerOption(commandLine);
 			commandLine.add("-Xrunjdwp:transport=dt_socket,address=" + fBackEndPort + ",suspend=y,server=y");
 			injectVMArgs(commandLine);
 			commandLine.add(getMainClassName());
@@ -829,7 +829,7 @@ public abstract class AbstractJDITest extends TestCase {
 			commandLine.add("-classpath");
 			commandLine.add(fClassPath);
 			addDebugOptions(commandLine);
-			commandLine.add("-Djava.compiler=NONE");
+			addNoJITCompilerOption(commandLine);
 			commandLine.add("-Xrunjdwp:transport=dt_socket,address=" + fBackEndPort + ",suspend=y,server=y");
 			injectVMArgs(commandLine);
 			commandLine.add(getMainClassName());
@@ -841,19 +841,16 @@ public abstract class AbstractJDITest extends TestCase {
 		}
 	}
 
-	private void addDebugOptions(Vector<String> commandLine) {
-		int vmVersion = 0;
-		try {
-			String versionString = System.getProperty("java.specification.version");
-			if (versionString != null) {
-				String[] nums = versionString.split("\\.");
-				if (nums.length > 0) {
-					vmVersion = Integer.parseInt(nums[0]);
-				}
-			}
-		} catch (Exception e) {
-			// Ignore
+	private void addNoJITCompilerOption(Vector<String> commandLine) {
+		if (Runtime.version().feature() >= 21) {
+			commandLine.add("-Xint");
+		} else {
+			commandLine.add("-Djava.compiler=NONE");
 		}
+	}
+
+	private void addDebugOptions(Vector<String> commandLine) {
+		int vmVersion = Runtime.version().feature();
 		if (vmVersion < 22) {
 			commandLine.add("-Xdebug");
 		}
