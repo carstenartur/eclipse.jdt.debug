@@ -9,6 +9,7 @@ permissions: {}
 
 jobs:
   publish-version-check-results:
+    if: github.event.workflow_run.conclusion != 'skipped'
     uses: ./.github/workflows/publishVersionCheckResults.yml
     with:
       botGithubId: eclipse-jdt-bot
