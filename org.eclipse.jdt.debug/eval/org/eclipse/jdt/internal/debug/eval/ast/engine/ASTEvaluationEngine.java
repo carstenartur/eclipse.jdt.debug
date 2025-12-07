@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -53,6 +53,7 @@ import org.eclipse.jdt.debug.core.IJavaArray;
 import org.eclipse.jdt.debug.core.IJavaArrayType;
 import org.eclipse.jdt.debug.core.IJavaDebugTarget;
 import org.eclipse.jdt.debug.core.IJavaObject;
+import org.eclipse.jdt.debug.core.IJavaPrimitiveValue;
 import org.eclipse.jdt.debug.core.IJavaReferenceType;
 import org.eclipse.jdt.debug.core.IJavaStackFrame;
 import org.eclipse.jdt.debug.core.IJavaThread;
@@ -212,6 +213,25 @@ public class ASTEvaluationEngine implements IAstEvaluationEngine {
 			context = new ArrayRuntimeContext((IJavaArray) thisContext, thread, getJavaProject());
 		} else {
 			context = new JavaObjectRuntimeContext(thisContext, getJavaProject(), thread);
+		}
+		doEvaluation(expression, context, thread, listener, evaluationDetail, hitBreakpoints);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.eclipse.jdt.debug.eval.IAstEvaluationEngine#evaluateExpression(org .eclipse.jdt.debug.eval.ICompiledExpression,
+	 * org.eclipse.jdt.debug.core.IJavaPrimitiveValue, org.eclipse.jdt.debug.core.IJavaThread, org.eclipse.jdt.debug.eval.IEvaluationListener, int,
+	 * boolean)
+	 */
+	@Override
+	public void evaluateExpression(ICompiledExpression expression, IJavaPrimitiveValue thisContext, IJavaThread thread, IEvaluationListener listener, int evaluationDetail, boolean hitBreakpoints) throws DebugException {
+		traceCaller(expression.getSnippet(), thread);
+		IRuntimeContext context = null;
+		if (thisContext instanceof IJavaArray) {
+			context = new ArrayRuntimeContext((IJavaArray) thisContext, thread, getJavaProject());
+		} else {
+			context = new JavaPrimitiveRuntimeContext(thisContext, getJavaProject(), thread);
 		}
 		doEvaluation(expression, context, thread, listener, evaluationDetail, hitBreakpoints);
 	}
@@ -610,6 +630,7 @@ public class ASTEvaluationEngine implements IAstEvaluationEngine {
 						DebugPlugin.log(new Status(IStatus.WARNING, DebugPlugin.getUniqueIdentifier(), "Compile error during code evaluation: " //$NON-NLS-1$
 								+ problem.getMessage()));
 					}
+					errorSequence.addProblemID(problemId);
 				}
 			}
 			if (snippetError || runMethodError) {

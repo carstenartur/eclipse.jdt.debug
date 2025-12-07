@@ -163,8 +163,7 @@ public class DefaultProjectClasspathEntry extends AbstractRuntimeClasspathEntry 
 		IRuntimeClasspathEntry[] runtimeEntries = new IRuntimeClasspathEntry[classpathEntries.size()];
 		for (int i = 0; i < runtimeEntries.length; i++) {
 			Object e = classpathEntries.get(i);
-			if (e instanceof IClasspathEntry) {
-				IClasspathEntry cpe = (IClasspathEntry)e;
+			if (e instanceof IClasspathEntry cpe) {
 				runtimeEntries[i] = new RuntimeClasspathEntry(cpe);
 			} else {
 				runtimeEntries[i] = (IRuntimeClasspathEntry)e;
@@ -290,8 +289,7 @@ public class DefaultProjectClasspathEntry extends AbstractRuntimeClasspathEntry 
 							ClasspathContainerInitializer initializer = JavaCore.getClasspathContainerInitializer(r.getPath().segment(0));
 							for (int i = 0; i < expandedPath.size(); i++) {
 								Object o = expandedPath.get(i);
-								if (o instanceof IRuntimeClasspathEntry) {
-									IRuntimeClasspathEntry re = (IRuntimeClasspathEntry)o;
+								if (o instanceof IRuntimeClasspathEntry re) {
 									if (re.getType() == IRuntimeClasspathEntry.CONTAINER) {
 										if (container instanceof IRuntimeContainerComparator) {
 											duplicate = ((IRuntimeContainerComparator)container).isDuplicate(re.getPath());
@@ -396,17 +394,16 @@ public class DefaultProjectClasspathEntry extends AbstractRuntimeClasspathEntry 
 	@Override
 	public String getName() {
 		if (isExportedEntriesOnly()) {
-			return NLS.bind(LaunchingMessages.DefaultProjectClasspathEntry_2, new String[] {getJavaProject().getElementName()});
+			return NLS.bind(LaunchingMessages.DefaultProjectClasspathEntry_2, getJavaProject().getElementName());
 		}
-		return NLS.bind(LaunchingMessages.DefaultProjectClasspathEntry_4, new String[] {getJavaProject().getElementName()});
+		return NLS.bind(LaunchingMessages.DefaultProjectClasspathEntry_4, getJavaProject().getElementName());
 	}
 	/* (non-Javadoc)
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (obj instanceof DefaultProjectClasspathEntry) {
-			DefaultProjectClasspathEntry entry = (DefaultProjectClasspathEntry) obj;
+		if (obj instanceof DefaultProjectClasspathEntry entry) {
 			return entry.getJavaProject().equals(getJavaProject()) &&
 				entry.isExportedEntriesOnly() == isExportedEntriesOnly();
 		}

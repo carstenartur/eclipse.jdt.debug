@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -210,15 +211,14 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 		File location = vm.getInstallLocation();
 		if (location == null) {
 			abort(
-					NLS.bind(LaunchingMessages.AbstractJavaLaunchConfigurationDelegate_JRE_home_directory_not_specified_for__0__5, new String[]{vm.getName()}),
+					NLS.bind(LaunchingMessages.AbstractJavaLaunchConfigurationDelegate_JRE_home_directory_not_specified_for__0__5, vm.getName()),
 					null,
 					IJavaLaunchConfigurationConstants.ERR_VM_INSTALL_DOES_NOT_EXIST);
 		}
 		if (!location.exists()) {
 			abort(
 					NLS.bind(LaunchingMessages.AbstractJavaLaunchConfigurationDelegate_JRE_home_directory_for__0__does_not_exist___1__6,
-									new String[]{vm.getName(),
-											location.getAbsolutePath()}),
+							vm.getName(), location.getAbsolutePath()),
 					null,
 					IJavaLaunchConfigurationConstants.ERR_VM_INSTALL_DOES_NOT_EXIST);
 		}
@@ -430,22 +430,17 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 		IRuntimeClasspathEntry[] entries = JavaRuntime
 				.computeUnresolvedRuntimeClasspath(configuration);
 		entries = JavaRuntime.resolveRuntimeClasspath(entries, configuration);
-
-		List<String> userEntries = new ArrayList<>(entries.length);
-		Set<String> set = new HashSet<>(entries.length);
+		Set<String> set = new LinkedHashSet<>(entries.length);
 		for (IRuntimeClasspathEntry entry : entries) {
 			if (entry.getClasspathProperty() == IRuntimeClasspathEntry.USER_CLASSES
 					|| entry.getClasspathProperty() == IRuntimeClasspathEntry.CLASS_PATH) {
 				String location = entry.getLocation();
 				if (location != null) {
-					if (!set.contains(location)) {
-						userEntries.add(location);
-						set.add(location);
-					}
+					set.add(location);
 				}
 			}
 		}
-		return userEntries.toArray(new String[userEntries.size()]);
+		return set.toArray(new String[set.size()]);
 	}
 
 	/**
@@ -463,31 +458,18 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 		IRuntimeClasspathEntry[] entries = JavaRuntime.computeUnresolvedRuntimeClasspath(config);
 		entries = JavaRuntime.resolveRuntimeClasspath(entries, config);
 		String[][] path = new String[2][entries.length];
-		List<String> classpathEntries = new ArrayList<>(entries.length);
-		List<String> modulepathEntries = new ArrayList<>(entries.length);
-		Set<String> classpathSet = new HashSet<>(entries.length);
-		Set<String> modulepathSet = new HashSet<>(entries.length);
+		Set<String> classpathSet = new LinkedHashSet<>(entries.length);
+		Set<String> modulepathSet = new LinkedHashSet<>(entries.length);
 		for (IRuntimeClasspathEntry entry : entries) {
 			String location = entry.getLocation();
 			if (location != null) {
 				switch (entry.getClasspathProperty()) {
 				case IRuntimeClasspathEntry.USER_CLASSES:
-					if (!classpathSet.contains(location)) {
-						classpathEntries.add(location);
-						classpathSet.add(location);
-					}
-					break;
 				case IRuntimeClasspathEntry.CLASS_PATH:
-					if (!classpathSet.contains(location)) {
-						classpathEntries.add(location);
-						classpathSet.add(location);
-					}
+					classpathSet.add(location);
 					break;
 				case IRuntimeClasspathEntry.MODULE_PATH:
-					if (!modulepathSet.contains(location)) {
-						modulepathEntries.add(location);
-						modulepathSet.add(location);
-					}
+					modulepathSet.add(location);
 					break;
 				default:
 					break;
@@ -495,8 +477,8 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 
 			}
 		}
-		path[0] = classpathEntries.toArray(new String[classpathEntries.size()]);
-		path[1] = modulepathEntries.toArray(new String[modulepathEntries.size()]);
+		path[0] = classpathSet.toArray(new String[classpathSet.size()]);
+		path[1] = modulepathSet.toArray(new String[modulepathSet.size()]);
 		return path;
 	}
 
@@ -802,7 +784,7 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 					abort(
 							NLS.bind(
 									LaunchingMessages.AbstractJavaLaunchConfigurationDelegate_Working_directory_does_not_exist___0__12,
-									new String[]{dir.toString()}),
+									dir.toString()),
 									null,
 									IJavaLaunchConfigurationConstants.ERR_WORKING_DIRECTORY_DOES_NOT_EXIST);
 				}
@@ -824,7 +806,7 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 				abort(
 					NLS.bind(
 									LaunchingMessages.AbstractJavaLaunchConfigurationDelegate_Working_directory_does_not_exist___0__12,
-									new String[]{path.toString()}),
+								path.toString()),
 					null,
 					IJavaLaunchConfigurationConstants.ERR_WORKING_DIRECTORY_DOES_NOT_EXIST);
 			} else {
@@ -836,7 +818,7 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 				abort(
 					NLS.bind(
 									LaunchingMessages.AbstractJavaLaunchConfigurationDelegate_Working_directory_does_not_exist___0__12,
-									new String[]{path.toString()}),
+								path.toString()),
 					null,
 					IJavaLaunchConfigurationConstants.ERR_WORKING_DIRECTORY_DOES_NOT_EXIST);
 			}
@@ -932,8 +914,7 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 		for (int i = 0; i < events.length; i++) {
 			DebugEvent event = events[i];
 			if (event.getKind() == DebugEvent.CREATE
-					&& event.getSource() instanceof IJavaDebugTarget) {
-				IJavaDebugTarget target = (IJavaDebugTarget) event.getSource();
+					&& event.getSource() instanceof IJavaDebugTarget target) {
 				ILaunch launch = target.getLaunch();
 				if (launch != null) {
 					ILaunchConfiguration configuration = launch
@@ -1053,7 +1034,7 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 		IVMInstall vm = verifyVMInstall(configuration);
 		IVMRunner runner = vm.getVMRunner(mode);
 		if (runner == null) {
-			abort(NLS.bind(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_0, new String[]{vm.getName(), mode}), null, IJavaLaunchConfigurationConstants.ERR_VM_RUNNER_DOES_NOT_EXIST);
+			abort(NLS.bind(LaunchingMessages.JavaLocalApplicationLaunchConfigurationDelegate_0, vm.getName(), mode), null, IJavaLaunchConfigurationConstants.ERR_VM_RUNNER_DOES_NOT_EXIST);
 		}
 		return runner;
 	}
@@ -1261,9 +1242,8 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 	private static String toAbsolutePath(IResource resource, IWorkspaceRoot root) throws CoreException {
 		IJavaElement element = JavaCore.create(resource);
 		if (element != null && element.exists()) {
-			if (element instanceof IJavaProject) {
+			if (element instanceof IJavaProject project) {
 				Set<String> paths = new HashSet<>();
-				IJavaProject project = (IJavaProject) element;
 				paths.add(absPath(root, project.getOutputLocation()));
 				for (IClasspathEntry entry : project.getResolvedClasspath(true)) {
 					if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE && entry.getOutputLocation() != null) {
@@ -1271,8 +1251,7 @@ public abstract class AbstractJavaLaunchConfigurationDelegate extends LaunchConf
 					}
 				}
 				return String.join(File.pathSeparator, paths);
-			} else if (element instanceof IPackageFragmentRoot) {
-				IPackageFragmentRoot packageRoot = (IPackageFragmentRoot) element;
+			} else if (element instanceof IPackageFragmentRoot packageRoot) {
 				IClasspathEntry entry = packageRoot.getJavaProject().getClasspathEntryFor(resource.getFullPath());
 				return absPath(root, entry.getOutputLocation());
 			}

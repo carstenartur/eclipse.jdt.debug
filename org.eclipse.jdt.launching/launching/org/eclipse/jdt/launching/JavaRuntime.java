@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -88,6 +89,7 @@ import org.eclipse.jdt.internal.launching.CompositeId;
 import org.eclipse.jdt.internal.launching.DefaultEntryResolver;
 import org.eclipse.jdt.internal.launching.DefaultProjectClasspathEntry;
 import org.eclipse.jdt.internal.launching.DetectVMInstallationsJob;
+import org.eclipse.jdt.internal.launching.EECompilationParticipant;
 import org.eclipse.jdt.internal.launching.EEVMInstall;
 import org.eclipse.jdt.internal.launching.EEVMType;
 import org.eclipse.jdt.internal.launching.JREContainerInitializer;
@@ -1178,7 +1180,7 @@ public final class JavaRuntime {
 		} else {
 			provider = getClasspathProviders().get(providerId);
 			if (provider == null) {
-				abort(NLS.bind(LaunchingMessages.JavaRuntime_26, new String[]{providerId}), null);
+				abort(NLS.bind(LaunchingMessages.JavaRuntime_26, providerId), null);
 			}
 		}
 		return provider;
@@ -1200,7 +1202,7 @@ public final class JavaRuntime {
 		} else {
 			provider = getClasspathProviders().get(providerId);
 			if (provider == null) {
-				abort(NLS.bind(LaunchingMessages.JavaRuntime_27, new String[]{providerId}), null);
+				abort(NLS.bind(LaunchingMessages.JavaRuntime_27, providerId), null);
 			}
 		}
 		return provider;
@@ -1229,6 +1231,10 @@ public final class JavaRuntime {
 	 * @since 2.0
 	 */
 	public static IRuntimeClasspathEntry[] resolveRuntimeClasspathEntry(IRuntimeClasspathEntry entry, ILaunchConfiguration configuration) throws CoreException {
+		return resolveRuntimeClasspathEntry(entry, configuration, JavaProject.NO_RELEASE);
+	}
+
+	static IRuntimeClasspathEntry[] resolveRuntimeClasspathEntry(IRuntimeClasspathEntry entry, ILaunchConfiguration configuration, int runtimeJavaVersion) throws CoreException {
 		boolean excludeTestCode = configuration.getAttribute(IJavaLaunchConfigurationConstants.ATTR_EXCLUDE_TEST_CODE, false);
 		switch (entry.getType()) {
 			case IRuntimeClasspathEntry.PROJECT:
@@ -1243,7 +1249,7 @@ public final class JavaRuntime {
 					IClasspathAttribute[] attributes = entry.getClasspathEntry().getExtraAttributes();
 					boolean withoutTestCode = entry.getClasspathEntry().isWithoutTestCode();
 					IRuntimeClasspathEntry[] entries = resolveOutputLocations(project, entry.getClasspathProperty(), attributes, excludeTestCode
-							|| withoutTestCode);
+							|| withoutTestCode, runtimeJavaVersion);
 					if (entries != null) {
 						return entries;
 					}
@@ -1251,7 +1257,7 @@ public final class JavaRuntime {
 					if (isOptional(entry.getClasspathEntry())) {
 						return new IRuntimeClasspathEntry[] {};
 					}
-					abort(NLS.bind(LaunchingMessages.JavaRuntime_Classpath_references_non_existant_project___0__3, new String[]{entry.getPath().lastSegment()}), null);
+					abort(NLS.bind(LaunchingMessages.JavaRuntime_Classpath_references_non_existant_project___0__3, entry.getPath().lastSegment()), null);
 				}
 				break;
 			case IRuntimeClasspathEntry.VARIABLE:
@@ -1282,7 +1288,7 @@ public final class JavaRuntime {
 				if (isOptional(entry.getClasspathEntry())) {
 					return new IRuntimeClasspathEntry[] {};
 				}
-				abort(NLS.bind(LaunchingMessages.JavaRuntime_Classpath_references_non_existant_archive___0__4, new String[] { entry.getPath().toString() }), null);
+				abort(NLS.bind(LaunchingMessages.JavaRuntime_Classpath_references_non_existant_archive___0__4, entry.getPath().toString()), null);
 			case IRuntimeClasspathEntry.OTHER:
 				resolver = getContributedResolver(((IRuntimeClasspathEntry2)entry).getTypeId());
 				return resolver.resolveRuntimeClasspathEntry(entry, configuration);
@@ -1372,20 +1378,35 @@ public final class JavaRuntime {
 	 *            extra attributes of the original classpath entry
 	 * @param excludeTestCode
 	 *            if true, output folders corresponding to test sources are excluded
+	 * @param runtimeJavaVersion
+	 *            the java runtime version used
 	 *
 	 * @return IRuntimeClasspathEntry[] or <code>null</code>
 	 * @throws CoreException
 	 *             if output resolution encounters a problem
 	 */
-	private static IRuntimeClasspathEntry[] resolveOutputLocations(IJavaProject project, int classpathProperty, IClasspathAttribute[] attributes, boolean excludeTestCode) throws CoreException {
+	private static IRuntimeClasspathEntry[] resolveOutputLocations(IJavaProject project, int classpathProperty, IClasspathAttribute[] attributes, boolean excludeTestCode, int runtimeJavaVersion) throws CoreException {
 		List<IPath> nonDefault = new ArrayList<>();
+		List<PathWithRelease> multiRelease = new ArrayList<>();
 		boolean defaultUsedByNonTest = false;
+		IPath def = project.getOutputLocation();
 		if (project.exists() && project.getProject().isOpen()) {
 			IClasspathEntry entries[] = project.getRawClasspath();
 			for (int i = 0; i < entries.length; i++) {
 				IClasspathEntry classpathEntry = entries[i];
 				if (classpathEntry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+					int release = getRelease(classpathEntry);
+					if (release > runtimeJavaVersion) {
+						// ignore entries that target a higher release
+						continue;
+					}
 					IPath path = classpathEntry.getOutputLocation();
+					if (release >= JavaProject.FIRST_MULTI_RELEASE) {
+						// needs special treatment!
+						IPath mrOutput = Objects.requireNonNullElse(path, def).append(new Path(String.format("META-INF/versions/%s", release))); //$NON-NLS-1$
+						multiRelease.add(new PathWithRelease(mrOutput, release));
+						continue;
+					}
 					if (path != null) {
 						if (!(excludeTestCode && classpathEntry.isTest())) {
 							nonDefault.add(path);
@@ -1399,17 +1420,24 @@ public final class JavaRuntime {
 			}
 		}
 		boolean isModular = project.getOwnModuleDescription() != null;
-		if (nonDefault.isEmpty() && !isModular && !excludeTestCode) {
+		if (nonDefault.isEmpty() && multiRelease.isEmpty() && !isModular && !excludeTestCode) {
 			// return here only if non-modular, because patch-module might be needed otherwise
 			return null;
 		}
 		// add the default location if not already included
-		IPath def = project.getOutputLocation();
 		if (!excludeTestCode || defaultUsedByNonTest) {
 			if (!nonDefault.contains(def)) {
 				nonDefault.add(def);
 			}
 		}
+		if (!multiRelease.isEmpty()) {
+			// now sort and add the multi-release output locations, must be with highest release first so that such types are found before lower ones
+			multiRelease.sort(Comparator.comparingInt(PathWithRelease::release));
+			for (PathWithRelease pathWithRelease : multiRelease) {
+				nonDefault.add(0, pathWithRelease.path());
+			}
+		}
+
 		IRuntimeClasspathEntry[] locations = new IRuntimeClasspathEntry[nonDefault.size()];
 		for (int i = 0; i < locations.length; i++) {
 			IClasspathEntry newEntry = JavaCore.newLibraryEntry(nonDefault.get(i), null, null, null, attributes, false);
@@ -1422,6 +1450,18 @@ public final class JavaRuntime {
 			}
 		}
 		return locations;
+	}
+
+	private static int getRelease(IClasspathEntry classpathEntry) {
+		String releaseAttribute = ClasspathEntry.getExtraAttribute(classpathEntry, IClasspathAttribute.RELEASE);
+		if (releaseAttribute != null) {
+			try {
+				return Integer.parseInt(releaseAttribute);
+			} catch (RuntimeException e) {
+				// can't use it then!
+			}
+		}
+		return JavaProject.NO_RELEASE;
 	}
 
 	private static boolean containsModuleInfo(IRuntimeClasspathEntry entry) {
@@ -1490,7 +1530,7 @@ public final class JavaRuntime {
 						IClasspathAttribute[] attributes = entry.getClasspathEntry().getExtraAttributes();
 						boolean withoutTestCode = entry.getClasspathEntry().isWithoutTestCode();
 						IRuntimeClasspathEntry[] entries = resolveOutputLocations(jp, entry.getClasspathProperty(), attributes, excludeTestCode
-								|| withoutTestCode);
+								|| withoutTestCode, JavaProject.NO_RELEASE);
 						if (entries != null) {
 							return entries;
 						}
@@ -1565,7 +1605,7 @@ public final class JavaRuntime {
 		}
 		IClasspathContainer container = JavaCore.getClasspathContainer(entry.getPath(), project);
 		if (container == null) {
-			abort(NLS.bind(LaunchingMessages.JavaRuntime_Could_not_resolve_classpath_container___0__1, new String[]{entry.getPath().toString()}), null);
+			abort(NLS.bind(LaunchingMessages.JavaRuntime_Could_not_resolve_classpath_container___0__1, entry.getPath().toString()), null);
 			// execution will not reach here - exception will be thrown
 			return null;
 		}
@@ -1670,10 +1710,11 @@ public final class JavaRuntime {
 	 * @since 2.0
 	 */
 	public static IRuntimeClasspathEntry[] resolveRuntimeClasspath(IRuntimeClasspathEntry[] entries, ILaunchConfiguration configuration) throws CoreException {
+		IRuntimeClasspathProvider classpathProvider = getClasspathProvider(configuration);
 		if (!isModularConfiguration(configuration)) {
-			return getClasspathProvider(configuration).resolveClasspath(entries, configuration);
+			return classpathProvider.resolveClasspath(entries, configuration);
 		}
-		IRuntimeClasspathEntry[] entries1 = getClasspathProvider(configuration).resolveClasspath(entries, configuration);
+		IRuntimeClasspathEntry[] entries1 = classpathProvider.resolveClasspath(entries, configuration);
 		List<IRuntimeClasspathEntry> entries2 = new ArrayList<>(entries1.length);
 		IJavaProject project;
 		try {
@@ -1741,10 +1782,10 @@ public final class JavaRuntime {
 		}
 		IJavaProject javaProject = getJavaModel().getJavaProject(projectName);
 		if (javaProject != null && javaProject.getProject().exists() && !javaProject.getProject().isOpen()) {
-			abort(NLS.bind(LaunchingMessages.JavaRuntime_28, new String[] {configuration.getName(), projectName}), IJavaLaunchConfigurationConstants.ERR_PROJECT_CLOSED, null);
+			abort(NLS.bind(LaunchingMessages.JavaRuntime_28, configuration.getName(), projectName), IJavaLaunchConfigurationConstants.ERR_PROJECT_CLOSED, null);
 		}
 		if ((javaProject == null) || !javaProject.exists()) {
-			abort(NLS.bind(LaunchingMessages.JavaRuntime_Launch_configuration__0__references_non_existing_project__1___1, new String[] {configuration.getName(), projectName}), IJavaLaunchConfigurationConstants.ERR_NOT_A_JAVA_PROJECT, null);
+			abort(NLS.bind(LaunchingMessages.JavaRuntime_Launch_configuration__0__references_non_existing_project__1___1, configuration.getName(), projectName), IJavaLaunchConfigurationConstants.ERR_NOT_A_JAVA_PROJECT, null);
 		}
 		return javaProject;
 	}
@@ -1822,7 +1863,7 @@ public final class JavaRuntime {
 		IVMInstallType vt = getVMInstallType(type);
 		if (vt == null) {
 			// error type does not exist
-			abort(NLS.bind(LaunchingMessages.JavaRuntime_Specified_VM_install_type_does_not_exist___0__2, new String[] {type}), null);
+			abort(NLS.bind(LaunchingMessages.JavaRuntime_Specified_VM_install_type_does_not_exist___0__2, type), null);
 		}
 		IVMInstall vm = null;
 		// look for a name
@@ -1835,7 +1876,7 @@ public final class JavaRuntime {
 		vm = vt.findVMInstallByName(name);
 		if (vm == null) {
 			// error - install not found
-			abort(NLS.bind(LaunchingMessages.JavaRuntime_Specified_VM_install_not_found__type__0___name__1__2, new String[] {vt.getName(), name}), null);
+			abort(NLS.bind(LaunchingMessages.JavaRuntime_Specified_VM_install_not_found__type__0___name__1__2, vt.getName(), name), null);
 		} else {
 			return vm;
 		}
@@ -1994,12 +2035,12 @@ public final class JavaRuntime {
 					String vmType = element.getAttribute("vmInstallType"); //$NON-NLS-1$
 					if (vmType == null) {
 						abort(NLS.bind("Missing required vmInstallType attribute for vmInstall contributed by {0}", //$NON-NLS-1$
-								new String[]{element.getContributor().getName()}), null);
+								element.getContributor().getName()), null);
 					}
 					String id = element.getAttribute("id"); //$NON-NLS-1$
 					if (id == null) {
 						abort(NLS.bind("Missing required id attribute for vmInstall contributed by {0}", //$NON-NLS-1$
-								new String[]{element.getContributor().getName()}), null);
+								element.getContributor().getName()), null);
 					}
 					IVMInstallType installType = getVMInstallType(vmType);
 					if (installType == null) {
@@ -2012,12 +2053,12 @@ public final class JavaRuntime {
 						String name = element.getAttribute("name"); //$NON-NLS-1$
 						if (name == null) {
 							abort(NLS.bind("vmInstall {0} contributed by {1} missing required attribute name", //$NON-NLS-1$
-									new String[]{id, element.getContributor().getName()}), null);
+									id, element.getContributor().getName()), null);
 						}
 						String home = element.getAttribute("home"); //$NON-NLS-1$
 						if (home == null) {
 							abort(NLS.bind("vmInstall {0} contributed by {1} missing required attribute home", //$NON-NLS-1$
-									new String[]{id, element.getContributor().getName()}), null);
+									id, element.getContributor().getName()), null);
 						}
 						String javadoc = element.getAttribute("javadocURL"); //$NON-NLS-1$
 						String vmArgs = element.getAttribute("vmArgs"); //$NON-NLS-1$
@@ -2048,7 +2089,7 @@ public final class JavaRuntime {
 									standin.setJavadocLocation(new URL(javadoc));
 								} catch (MalformedURLException e) {
 									abort(NLS.bind("Illegal javadocURL attribute for vmInstall {0} contributed by {1}", //$NON-NLS-1$
-											new String[]{id, element.getContributor().getName()}), e);
+											id, element.getContributor().getName()), e);
 								}
 							}
 							// allow default arguments to be specified by VM install type if no explicit arguments
@@ -2070,7 +2111,7 @@ public final class JavaRuntime {
 	                                String libPathStr = library.getAttribute("path"); //$NON-NLS-1$
 	                                if (libPathStr == null) {
 	                                    abort(NLS.bind("library for vmInstall {0} contributed by {1} missing required attribute libPath", //$NON-NLS-1$
-	                                            new String[]{id, element.getContributor().getName()}), null);
+												id, element.getContributor().getName()), null);
 	                                }
 	                                String sourcePathStr = library.getAttribute("sourcePath"); //$NON-NLS-1$
 	                                String packageRootStr = library.getAttribute("packageRootPath"); //$NON-NLS-1$
@@ -2106,7 +2147,7 @@ public final class JavaRuntime {
                     fgContributedVMs.add(id);
 				} else {
 					abort(NLS.bind("Illegal element {0} in vmInstalls extension contributed by {1}", //$NON-NLS-1$
-							new String[]{element.getName(), element.getContributor().getName()}), null);
+							element.getName(), element.getContributor().getName()), null);
 				}
 			} catch (CoreException e) {
 				LaunchingPlugin.log(e);
@@ -3338,88 +3379,36 @@ public final class JavaRuntime {
 			LaunchingPlugin.log("Compliance needs an update."); //$NON-NLS-1$
 		}
         if (vm instanceof IVMInstall2) {
-            String javaVersion = ((IVMInstall2)vm).getJavaVersion();
-            if (javaVersion != null) {
-            	String compliance = null;
-				if (javaVersion.startsWith(JavaCore.VERSION_1_8)) {
-					compliance = JavaCore.VERSION_1_8;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_9)
-						&& (javaVersion.length() == JavaCore.VERSION_9.length() || javaVersion.charAt(JavaCore.VERSION_9.length()) == '.')) {
-					compliance = JavaCore.VERSION_9;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_10)
-						&& (javaVersion.length() == JavaCore.VERSION_10.length() || javaVersion.charAt(JavaCore.VERSION_10.length()) == '.')) {
-					compliance = JavaCore.VERSION_10;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_11)
-						&& (javaVersion.length() == JavaCore.VERSION_11.length() || javaVersion.charAt(JavaCore.VERSION_11.length()) == '.')) {
-					compliance = JavaCore.VERSION_11;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_12)
-						&& (javaVersion.length() == JavaCore.VERSION_12.length() || javaVersion.charAt(JavaCore.VERSION_12.length()) == '.')) {
-					compliance = JavaCore.VERSION_12;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_13)
-						&& (javaVersion.length() == JavaCore.VERSION_13.length() || javaVersion.charAt(JavaCore.VERSION_13.length()) == '.')) {
-					compliance = JavaCore.VERSION_13;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_14)
-						&& (javaVersion.length() == JavaCore.VERSION_14.length() || javaVersion.charAt(JavaCore.VERSION_14.length()) == '.')) {
-					compliance = JavaCore.VERSION_14;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_15)
-						&& (javaVersion.length() == JavaCore.VERSION_15.length() || javaVersion.charAt(JavaCore.VERSION_15.length()) == '.')) {
-					compliance = JavaCore.VERSION_15;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_16)
-						&& (javaVersion.length() == JavaCore.VERSION_16.length() || javaVersion.charAt(JavaCore.VERSION_16.length()) == '.')) {
-					compliance = JavaCore.VERSION_16;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_17)
-						&& (javaVersion.length() == JavaCore.VERSION_17.length() || javaVersion.charAt(JavaCore.VERSION_17.length()) == '.')) {
-					compliance = JavaCore.VERSION_17;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_18)
-						&& (javaVersion.length() == JavaCore.VERSION_18.length() || javaVersion.charAt(JavaCore.VERSION_18.length()) == '.')) {
-					compliance = JavaCore.VERSION_18;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_19)
-						&& (javaVersion.length() == JavaCore.VERSION_19.length() || javaVersion.charAt(JavaCore.VERSION_19.length()) == '.')) {
-					compliance = JavaCore.VERSION_19;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_20)
-						&& (javaVersion.length() == JavaCore.VERSION_20.length() || javaVersion.charAt(JavaCore.VERSION_20.length()) == '.')) {
-					compliance = JavaCore.VERSION_20;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_21)
-						&& (javaVersion.length() == JavaCore.VERSION_21.length() || javaVersion.charAt(JavaCore.VERSION_21.length()) == '.')) {
-					compliance = JavaCore.VERSION_21;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_22)
-						&& (javaVersion.length() == JavaCore.VERSION_22.length() || javaVersion.charAt(JavaCore.VERSION_22.length()) == '.')) {
-					compliance = JavaCore.VERSION_22;
-				} else if (javaVersion.startsWith(JavaCore.VERSION_23)
-						&& (javaVersion.length() == JavaCore.VERSION_23.length() || javaVersion.charAt(JavaCore.VERSION_23.length()) == '.')) {
-					compliance = JavaCore.VERSION_23;
-				} else {
-					compliance = JavaCore.VERSION_23; // use latest by default
-				}
+			String compliance = EECompilationParticipant.getCompilerCompliance((IVMInstall2) vm);
+			if (compliance == null) {
+				compliance = JavaCore.latestSupportedJavaVersion();
+			}
 
-            	Hashtable<String, String> options= JavaCore.getOptions();
+			Hashtable<String, String> options = JavaCore.getOptions();
 
-            	org.osgi.service.prefs.Preferences bundleDefaults = BundleDefaultsScope.INSTANCE.getNode(JavaCore.PLUGIN_ID);
+			org.osgi.service.prefs.Preferences bundleDefaults = BundleDefaultsScope.INSTANCE.getNode(JavaCore.PLUGIN_ID);
 
-            	boolean isDefault =
-            			equals(JavaCore.COMPILER_COMPLIANCE, options, bundleDefaults) &&
-            			equals(JavaCore.COMPILER_SOURCE, options, bundleDefaults) &&
-            			equals(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, options, bundleDefaults) &&
-            			equals(JavaCore.COMPILER_PB_ASSERT_IDENTIFIER, options, bundleDefaults) &&
-            			equals(JavaCore.COMPILER_PB_ENUM_IDENTIFIER, options, bundleDefaults);
-				if (JavaCore.compareJavaVersions(compliance, JavaCore.VERSION_10) > 0) {
-					isDefault = isDefault && equals(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, options, bundleDefaults)
-							&& equals(JavaCore.COMPILER_PB_REPORT_PREVIEW_FEATURES, options, bundleDefaults);
-				}
-            	// only update the compliance settings if they are default settings, otherwise the
-            	// settings have already been modified by a tool or user
+			boolean isDefault = equals(JavaCore.COMPILER_COMPLIANCE, options, bundleDefaults)
+					&& equals(JavaCore.COMPILER_SOURCE, options, bundleDefaults)
+					&& equals(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, options, bundleDefaults)
+					&& equals(JavaCore.COMPILER_PB_ASSERT_IDENTIFIER, options, bundleDefaults)
+					&& equals(JavaCore.COMPILER_PB_ENUM_IDENTIFIER, options, bundleDefaults);
+			if (JavaCore.compareJavaVersions(compliance, JavaCore.VERSION_10) > 0) {
+				isDefault = isDefault && equals(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, options, bundleDefaults)
+						&& equals(JavaCore.COMPILER_PB_REPORT_PREVIEW_FEATURES, options, bundleDefaults);
+			}
+			// only update the compliance settings if they are default settings, otherwise the
+			// settings have already been modified by a tool or user
+			if (LaunchingPlugin.isVMLogging()) {
+				LaunchingPlugin.log("Compliance to be updated is: " + compliance); //$NON-NLS-1$
+			}
+			if (isDefault) {
+				JavaCore.setComplianceOptions(compliance, options);
+				JavaCore.setOptions(options);
 				if (LaunchingPlugin.isVMLogging()) {
-					LaunchingPlugin.log("Compliance to be updated is: " + compliance); //$NON-NLS-1$
+					LaunchingPlugin.log("Compliance Options are updated."); //$NON-NLS-1$
 				}
-            	if (isDefault) {
-					JavaCore.setComplianceOptions(compliance, options);
-					JavaCore.setOptions(options);
-					if (LaunchingPlugin.isVMLogging()) {
-						LaunchingPlugin.log("Compliance Options are updated."); //$NON-NLS-1$
-					}
-            	}
-
-            }
+			}
         }
 	}
 
@@ -3809,5 +3798,9 @@ public final class JavaRuntime {
 		String[] limitArray = list.toArray(new String[list.size()]);
 		Arrays.sort(limitArray);
 		return String.join(COMMA, limitArray);
+	}
+
+	private static record PathWithRelease(IPath path, int release) {
+
 	}
 }

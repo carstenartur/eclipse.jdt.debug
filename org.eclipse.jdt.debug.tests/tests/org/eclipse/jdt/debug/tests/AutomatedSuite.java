@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -29,6 +29,7 @@ import org.eclipse.jdt.debug.tests.breakpoints.ConditionalBreakpointsTests;
 import org.eclipse.jdt.debug.tests.breakpoints.ConditionalBreakpointsWithFileClass;
 import org.eclipse.jdt.debug.tests.breakpoints.ConditionalBreakpointsWithGenerics;
 import org.eclipse.jdt.debug.tests.breakpoints.DeferredBreakpointTests;
+import org.eclipse.jdt.debug.tests.breakpoints.DisableOnHitTest;
 import org.eclipse.jdt.debug.tests.breakpoints.ExceptionBreakpointTests;
 import org.eclipse.jdt.debug.tests.breakpoints.HitCountBreakpointsTests;
 import org.eclipse.jdt.debug.tests.breakpoints.ImportBreakpointsTest;
@@ -86,6 +87,7 @@ import org.eclipse.jdt.debug.tests.core.LineTrackerTests;
 import org.eclipse.jdt.debug.tests.core.LiteralTests17;
 import org.eclipse.jdt.debug.tests.core.LocalVariableTests;
 import org.eclipse.jdt.debug.tests.core.ModuleOptionsTests;
+import org.eclipse.jdt.debug.tests.core.MultiReleaseLaunchTests;
 import org.eclipse.jdt.debug.tests.core.ProcessTests;
 import org.eclipse.jdt.debug.tests.core.ResolveRuntimeClasspathTests;
 import org.eclipse.jdt.debug.tests.core.RuntimeClasspathEntryTests;
@@ -150,8 +152,10 @@ import org.eclipse.jdt.debug.tests.ui.DetailPaneManagerTests;
 import org.eclipse.jdt.debug.tests.ui.JavaSnippetEditorTest;
 import org.eclipse.jdt.debug.tests.ui.OpenFromClipboardTests;
 import org.eclipse.jdt.debug.tests.ui.ViewManagementTests;
+import org.eclipse.jdt.debug.tests.ui.VirtualThreadsDebugViewTests;
 import org.eclipse.jdt.debug.tests.ui.presentation.ModelPresentationTests;
 import org.eclipse.jdt.debug.tests.ui.presentation.ModelPresentationTests18;
+import org.eclipse.jdt.debug.tests.variables.CompareObjectsTest;
 import org.eclipse.jdt.debug.tests.variables.DetailFormatterTests;
 import org.eclipse.jdt.debug.tests.variables.TestAnonymousInspect;
 import org.eclipse.jdt.debug.tests.variables.TestInstanceRetrieval;
@@ -197,13 +201,13 @@ public class AutomatedSuite extends DebugSuite {
 		addTest(new TestSuite(ConfigurationEncodingTests.class));
 		addTest(new TestSuite(LaunchConfigurationManagerTests.class));
 		addTest(new TestSuite(LaunchConfigurationTests.class));
-		if (JavaProjectHelper.isJava23_Compatible()) {
+		if (JavaProjectHelper.isJava25_Compatible()) {
 			addTest(new TestSuite(InstanceMainMethodsTests.class));
 		}
 		addTest(new TestSuite(ProjectClasspathVariableTests.class));
 
 	//mac specific tests
-		if(Platform.OS_MACOSX.equals(Platform.getOS())) {
+		if (Platform.OS.isMac()) {
 			addTest(new TestSuite(PListParserTests.class));
 		}
 
@@ -288,6 +292,7 @@ public class AutomatedSuite extends DebugSuite {
 		addTest(new TestSuite(WorkingDirectoryTests.class));
 		addTest(new TestSuite(EventDispatcherTest.class));
 		addTest(new TestSuite(SyntheticVariableTests.class));
+		addTest(new TestSuite(MultiReleaseLaunchTests.class));
 
 	// Refactoring tests
 		//TODO: project rename
@@ -396,6 +401,8 @@ public class AutomatedSuite extends DebugSuite {
 		addTest(new TestSuite(TriggerPointBreakpointsTests.class));
 		addTest(new TestSuite(JavaThreadEventHandlerTests.class));
 		addTest(new TestSuite(ConditionalBreakpointsWithFileClass.class));
+		addTest(new TestSuite(CompareObjectsTest.class));
+		addTest(new TestSuite(DisableOnHitTest.class));
 
 		if (JavaProjectHelper.isJava8Compatible()) {
 			addTest(new TestSuite(TestToggleBreakpointsTarget8.class));
@@ -416,6 +423,9 @@ public class AutomatedSuite extends DebugSuite {
 
 		if (JavaProjectHelper.isJava16_Compatible()) {
 			addTest(new TestSuite(RecordBreakpointTests.class));
+		}
+		if (JavaProjectHelper.isJava23_Compatible()) {
+			addTest(new TestSuite(VirtualThreadsDebugViewTests.class));
 		}
 	}
 }

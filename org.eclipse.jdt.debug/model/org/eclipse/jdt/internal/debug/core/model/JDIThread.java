@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -177,6 +177,7 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 	 * @since 3.3
 	 */
 	private boolean fIsDaemon;
+	private boolean fIsVirtualThread;
 
 	/**
 	 * Lock used to guard access to internal data that need to be updated in atomic manner
@@ -362,6 +363,7 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 		// system thread
 		try {
 			determineIfSystemThread();
+			determineIfSVirtualThread();
 		} catch (DebugException e) {
 			Throwable underlyingException = e.getStatus().getException();
 			if (underlyingException instanceof VMDisconnectedException) {
@@ -559,6 +561,25 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 			}
 		}
 	}
+
+	/**
+	 * Determines whether this is a virtual thread.
+	 *
+	 * @throws DebugException
+	 *             on failure
+	 */
+	protected void determineIfSVirtualThread() throws DebugException {
+		try {
+			ReferenceType referenceType = getUnderlyingThread().referenceType();
+			if (referenceType.name().equals("java.lang.VirtualThread")) { //$NON-NLS-1$
+				fIsVirtualThread = true;
+				fIsSystemThread = false;
+			}
+		} catch (RuntimeException e) {
+			targetRequestFailed("Unable to determine thread daemon status", e); //$NON-NLS-1$
+		}
+	}
+
 
 	/**
 	 * Determines whether this is a daemon thread.
@@ -1420,8 +1441,12 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 			}
 		}
 		catch (CoreException e) {
-			e.printStackTrace();
+			logError(e);
 		}
+
+		// Condition for a trigger breakpoint that is set to resume on hit
+		boolean resumeOnHit = true;
+
 		// Evaluate breakpoint condition (if any). The condition is evaluated
 		// regardless of the current suspend vote status, since breakpoint
 		// listeners
@@ -1436,10 +1461,14 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 				ConditionalBreakpointHandler handler = new ConditionalBreakpointHandler();
 				int vote = handler.breakpointHit(this, breakpoint);
 				if (vote == IJavaBreakpointListener.DONT_SUSPEND) {
-					// condition is false, breakpoint is not hit
-					synchronized (this) {
-						fSuspendVoteInProgress = false;
-						return false;
+					if (policy == IJavaBreakpoint.RESUME_ON_HIT) {
+						resumeOnHit = false;
+					} else {
+						// condition is false, breakpoint is not hit
+						synchronized (this) {
+							fSuspendVoteInProgress = false;
+							return false;
+						}
 					}
 				}
 				if (handler.hasErrors()) {
@@ -1451,15 +1480,33 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 						return true;
 					}
 				}
-				DebugPlugin.getDefault().getBreakpointManager().enableTriggerPoints(null, false);
-					// make a note that we auto-disabled the trigger point for this breakpoint.
-					// we re enable it at cleanup of JDITarget
+				try {
+					if (breakpoint.isTriggerPoint()) {
+						DebugPlugin.getDefault().getBreakpointManager().enableTriggerPoints(null, false);
+						// make a note that we auto-disabled the trigger point for this breakpoint.
+						// we re enable it at cleanup of JDITarget
+					}
+				} catch (CoreException e) {
+					logError(e);
+				}
 			}
+		}
+
+		try {
+			if (resumeOnHit && breakpoint.getSuspendPolicy() == IJavaBreakpoint.RESUME_ON_HIT) {
+				synchronized (this) {
+					fSuspendVoteInProgress = false;
+					return false; // Won't be suspended
+				}
+			}
+		} catch (CoreException e) {
+			logError(e);
 		}
 
 		// poll listeners without holding lock on thread
 		boolean suspend = true;
 		try {
+
 			suspend = JDIDebugPlugin.getDefault().fireBreakpointHit(this,
 					breakpoint);
 		} finally {
@@ -1471,6 +1518,9 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 					suspend = true;
 				}
 			}
+		}
+		if (suspend) {
+			handleDisableOnHit(breakpoint);
 		}
 		return suspend;
 	}
@@ -1580,6 +1630,10 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 	@Override
 	public boolean isDaemon() throws DebugException {
 		return fIsDaemon;
+	}
+
+	public boolean isVirtualThread() {
+		return fIsVirtualThread;
 	}
 
 	@Override
@@ -1883,7 +1937,6 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 	public void suspend() throws DebugException {
 		// prepare for the suspend request
 		prepareForClientSuspend();
-
 		synchronized (this) {
 			try {
 				// Abort any pending step request
@@ -3684,5 +3737,16 @@ public class JDIThread extends JDIDebugElement implements IJavaThread {
 
 	boolean isBreakpointHandlingOngoing() {
 		return fCompletingBreakpointHandling.get() || fHandlingSuspendForBreakpoint.get();
+	}
+
+	private void handleDisableOnHit(JavaBreakpoint breakpoint) {
+		try {
+			if (breakpoint.isDisableOnHit()) {
+				breakpoint.setEnabled(false);
+				breakpoint.setDisableOnHit(false);
+			}
+		} catch (CoreException e) {
+			JDIDebugPlugin.log(e);
+		}
 	}
 }

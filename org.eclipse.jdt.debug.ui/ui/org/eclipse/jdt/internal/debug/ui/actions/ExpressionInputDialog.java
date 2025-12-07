@@ -44,6 +44,7 @@ import org.eclipse.jface.text.TextViewer;
 import org.eclipse.jface.text.TextViewerUndoManager;
 import org.eclipse.jface.text.contentassist.IContentAssistProcessor;
 import org.eclipse.jface.text.source.ISourceViewer;
+import org.eclipse.jface.util.Util;
 import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
@@ -152,7 +153,7 @@ public class ExpressionInputDialog extends TrayDialog {
             JDIDebugUIPlugin.log(e);
         }
 
-        SWTFactory.createWrapLabel(fSourceViewerComposite, NLS.bind(ActionMessages.ExpressionInputDialog_0, new String[] {name}), 1, convertHorizontalDLUsToPixels(IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH));
+		SWTFactory.createWrapLabel(fSourceViewerComposite, NLS.bind(ActionMessages.ExpressionInputDialog_0, name), 1, convertHorizontalDLUsToPixels(IDialogConstants.MINIMUM_MESSAGE_AREA_WIDTH));
 
         fSourceViewer= new JDISourceViewer(fSourceViewerComposite, null, SWT.BORDER | SWT.V_SCROLL | SWT.H_SCROLL);
         fSourceViewer.setInput(fSourceViewerComposite);
@@ -337,7 +338,7 @@ public class ExpressionInputDialog extends TrayDialog {
 	 */
 	protected void setErrorMessage(String message) {
 	    if (message == null) {
-	        message= ""; //$NON-NLS-1$
+			message = Util.ZERO_LENGTH_STRING;
 	    }
 	    fErrorText.setText(message);
 	    getButton(IDialogConstants.OK_ID).setEnabled(message.length() == 0);

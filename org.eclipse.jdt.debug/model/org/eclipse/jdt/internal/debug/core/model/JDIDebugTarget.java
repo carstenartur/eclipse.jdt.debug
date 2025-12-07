@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2017 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.eclipse.core.resources.IFile;
@@ -247,7 +248,7 @@ public class JDIDebugTarget extends JDIDebugElement implements
 	 * Evaluation engine cache by Java project. Engines are disposed when this
 	 * target terminates.
 	 */
-	private final Map<IJavaProject, IAstEvaluationEngine> fEngines = new HashMap<>(2);
+	private final ConcurrentMap<IJavaProject, IAstEvaluationEngine> fEngines = new ConcurrentHashMap<>(2);
 
 	/**
 	 * List of step filters - each string is a pattern/fully qualified name of a
@@ -337,6 +338,31 @@ public class JDIDebugTarget extends JDIDebugElement implements
 	 * Labels given by the user is stored in this map, where the key is the unique ID of the object.
 	 */
 	private final Map<Long, String> objectLabels = new HashMap<>();
+
+	/**
+	 * HCR failure alert pref for current debug session.
+	 */
+	private volatile boolean hcrDebugErrors = false;
+
+	/**
+	 * Returns the hcrDebugErrors boolean to decide whether HCR error pop-up should be shown or not for a debugging session dispatcher per debug
+	 * target.
+	 *
+	 * @return boolean
+	 */
+	public boolean isHcrFailurePopUpEnabled() {
+		return hcrDebugErrors;
+	}
+
+	/**
+	 * Sets the user preference for ignoring error pop-up for a debugging session
+	 *
+	 * @param preference
+	 *            Sets true or false for showing pop-up
+	 */
+	public void setHcrDebugErrorPref(boolean preference) {
+		hcrDebugErrors = preference;
+	}
 
 	/**
 	 * Creates a new JDI debug target for the given virtual machine.
@@ -1811,12 +1837,10 @@ public class JDIDebugTarget extends JDIDebugElement implements
 		removeAllBreakpoints();
 		DebugPlugin.getDefault().getBreakpointManager().enableTriggerPoints(null, true);
 		fOutOfSynchTypes.clear();
-		Iterator<IAstEvaluationEngine> engines = fEngines.values().iterator();
-		while (engines.hasNext()) {
-			IAstEvaluationEngine engine = engines.next();
+		fEngines.values().removeIf((IAstEvaluationEngine engine) -> {
 			engine.dispose();
-		}
-		fEngines.clear();
+			return true;
+		});
 		fVirtualMachine = null;
 		setThreadStartHandler(null);
 		setEventDispatcher(null);
@@ -3246,4 +3270,5 @@ public class JDIDebugTarget extends JDIDebugElement implements
 			}
 		}
 	}
+
 }

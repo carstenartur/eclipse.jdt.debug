@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 IBM Corporation.
+ * Copyright (c) 2024, 2025 IBM Corporation.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -32,7 +32,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForNoParameters() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.tes3() line: 31");
@@ -59,7 +59,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForSingleParameter() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.tes3(int) line: 31");
@@ -86,7 +86,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForMultipleParameters() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.tes3(int, String) line: 31");
@@ -113,7 +113,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForMultipleParameters_Three() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.tes3(int, String,Sample) line: 34");
@@ -140,7 +140,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForOneNormalAndOneFullyQualifiedArguments() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.tesComplex(String[], URL[]) line: 37");
@@ -167,7 +167,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForBothFullyQualifiedArguments() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.tesComplex(Object, URL[]) line: 37");
@@ -194,7 +194,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForSingleVarArgs() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.testMethod(Object...) line: 43");
@@ -221,7 +221,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForSingleVarArgsAndOneNormal() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("Sample.testMethod(Object,Object...) line: 40");
@@ -248,7 +248,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForGenerics() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("SampleGenerics<E>(SampleGenerics).remove() line: 25");
@@ -273,36 +273,9 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 		}
 	}
 
-	public void testLinkNavigationTrueForComplexGenerics() throws Exception {
-		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
-		waitForBuild();
-		waitForJobs();
-		consoleDocumentWithText("ReferencePipeline$Head<E_IN,E_OUT>.forEach(Consumer<? super P_OUT>) line: 1");
-		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
-		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 2, hyperlinks.length);
-		String expectedText = "/*";
-		try {
-			for (IHyperlink hyperlink : hyperlinks) {
-				closeAllEditors();
-				hyperlink.linkActivated();
-				IEditorPart editor = waitForEditorOpen();
-				String[] selectedText = new String[1];
-				sync(() -> selectedText[0] = getSelectedText(editor));
-				selectedText[0] = selectedText[0].trim();
-				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
-
-			}
-		} finally {
-			closeAllEditors();
-			boolean force = true;
-			project.getProject().delete(force, new NullProgressMonitor());
-		}
-	}
-
 	public void testLinkNavigationTrueForInnerClass() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("InnerClassTest$innerL1.check() line: 23");
@@ -329,7 +302,7 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForInnerClassMultilevel() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
 		consoleDocumentWithText("InnerClassTest$innerL1$innerL2.check2() line: 27");
@@ -356,13 +329,201 @@ public class JavaStackTraceAmbiguityTest extends AbstractJavaStackTraceConsoleTe
 
 	public void testLinkNavigationTrueForInnerClassParameters() throws Exception {
 		String projectName = "StackTest";
-		IJavaProject project = createProject(projectName, "testfiles/Ambiguity/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
 		waitForBuild();
 		waitForJobs();
-		consoleDocumentWithText("ScheduledThreadPoolExecutor(ThreadPoolExecutor).runWorker(ThreadPoolExecutor$Worker) line: 36");
+		consoleDocumentWithText("MyScheduledExecutor(Worker).doWork(MyScheduledExecutor$Wor) line: 20");
 		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
 		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 2, hyperlinks.length);
-		String expectedText = "package java.util.concurrent;";
+		String expectedText = "System.out.println(\"Expected_Result\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+
+	public void testLinkNavigationTrueForInnerClassMultiParameters() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("MyScheduledExecutor(Worker).doWorkParams(MyScheduledExecutor$Wor,MyScheduledExecutor$Ran) line: 23");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 2, hyperlinks.length);
+		String expectedText = "System.out.println(\"Expected_Result\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+
+	public void testLinkNavigationTrueForLinksWithNoProperMethodSignature() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("Sample.testBlank(Sample.java:40)");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 1, hyperlinks.length);
+		String expectedText = "System.out.println(\"Expected_No_Signature\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+
+	public void testLinkNavigationTrueForLinksWithVarArgs() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("Sample.tes2(Object, Object...) line: 40 ");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 2, hyperlinks.length);
+		String expectedText = "System.out.println(\"Expected_VarArgs\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+
+	public void testLinkNavigationTrueForLinksWithSingleSpaceBeforeSignature() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("at a.Sample.testBlank (Sample.java:40)");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 1, hyperlinks.length);
+		String expectedText = "System.out.println(\"Expected_No_Signature\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+
+	public void testLinkNavigationTrueForLinksWithMultiSpaceBeforeSignature() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("at a.Sample.testBlank\t\t(Sample.java:40)");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 1, hyperlinks.length);
+		String expectedText = "System.out.println(\"Expected_No_Signature\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+
+	public void testLinkNavigationTrueForLinksWithTimeStamps1() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("250420 12:59:13.999 (SampleGenerics.java:25) Hello");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 1, hyperlinks.length);
+		String expectedText = "System.out.print(\"EXPECTED_GENERICS\");";
+		try {
+			for (IHyperlink hyperlink : hyperlinks) {
+				closeAllEditors();
+				hyperlink.linkActivated();
+				IEditorPart editor = waitForEditorOpen();
+				String[] selectedText = new String[1];
+				sync(() -> selectedText[0] = getSelectedText(editor));
+				selectedText[0] = selectedText[0].trim();
+				assertEquals("Wrong text selected after hyperlink navigation", expectedText, selectedText[0]);
+
+			}
+		} finally {
+			closeAllEditors();
+			boolean force = true;
+			project.getProject().delete(force, new NullProgressMonitor());
+		}
+	}
+	public void testLinkNavigationTrueForLinksWithTimeStamps2() throws Exception {
+		String projectName = "StackTest";
+		IJavaProject project = createProject(projectName, "testfiles/AmbiguityTest/", JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+		waitForBuild();
+		waitForJobs();
+		consoleDocumentWithText("2025-04-20 12.01.23 (SampleGenerics.java:25) Hello");
+		IHyperlink[] hyperlinks = fConsole.getHyperlinks();
+		assertEquals("Wrong hyperlinks, listing all links: " + allLinks(), 1, hyperlinks.length);
+		String expectedText = "System.out.print(\"EXPECTED_GENERICS\");";
 		try {
 			for (IHyperlink hyperlink : hyperlinks) {
 				closeAllEditors();

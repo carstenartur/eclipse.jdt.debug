@@ -101,7 +101,7 @@ public class RuntimeClasspathEntry implements IRuntimeClasspathEntry {
 				setType(VARIABLE);
 				break;
 			default:
-				throw new IllegalArgumentException(NLS.bind(LaunchingMessages.RuntimeClasspathEntry_Illegal_classpath_entry__0__1, new String[] {entry.toString()}));
+				throw new IllegalArgumentException(NLS.bind(LaunchingMessages.RuntimeClasspathEntry_Illegal_classpath_entry__0__1, entry.toString()));
 		}
 		setClasspathEntry(entry);
 		initializeClasspathProperty();
@@ -128,8 +128,7 @@ public class RuntimeClasspathEntry implements IRuntimeClasspathEntry {
 				setType(VARIABLE);
 				break;
 			default:
-				throw new IllegalArgumentException(NLS.bind(LaunchingMessages.RuntimeClasspathEntry_Illegal_classpath_entry__0__1, new String[] {
-						entry.toString() }));
+				throw new IllegalArgumentException(NLS.bind(LaunchingMessages.RuntimeClasspathEntry_Illegal_classpath_entry__0__1, entry.toString()));
 		}
 		setClasspathEntry(entry);
 		setClasspathProperty(classpathProperty);
@@ -574,8 +573,7 @@ public class RuntimeClasspathEntry implements IRuntimeClasspathEntry {
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		if (obj instanceof IRuntimeClasspathEntry) {
-			IRuntimeClasspathEntry r = (IRuntimeClasspathEntry)obj;
+		if (obj instanceof IRuntimeClasspathEntry r) {
 			if (getType() == r.getType() && getClasspathProperty() == r.getClasspathProperty()) {
 				if (getType() == IRuntimeClasspathEntry.CONTAINER) {
 					String id = getPath().segment(0);

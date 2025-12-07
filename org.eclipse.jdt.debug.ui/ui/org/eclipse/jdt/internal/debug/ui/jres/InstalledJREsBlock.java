@@ -14,7 +14,6 @@
 package org.eclipse.jdt.internal.debug.ui.jres;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -24,7 +23,6 @@ import java.util.Set;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.SubMonitor;
@@ -254,7 +252,7 @@ public class InstalledJREsBlock implements IAddVMDialogRequestor, ISelectionProv
 				switch(columnIndex) {
 					case 0:
 						if (JavaRuntime.isContributedVMInstall(vm.getId())) {
-							return NLS.bind(JREMessages.InstalledJREsBlock_19, new String[]{vm.getName()});
+							return NLS.bind(JREMessages.InstalledJREsBlock_19, vm.getName());
 						}
 						if(fVMList.getChecked(element)) {
 							return NLS.bind(JREMessages.InstalledJREsBlock_7, vm.getName());
@@ -881,7 +879,7 @@ public class InstalledJREsBlock implements IAddVMDialogRequestor, ISelectionProv
 		dialog.setText(JREMessages.InstalledJREsBlock_10);
 
 		String path = null;
-		if (Platform.OS_MACOSX.equals(Platform.getOS())) {
+		if (Platform.OS.isMac()) {
 			String MAC_JAVA_SEARCH_PATH = "/Library/Java/JavaVirtualMachines"; //$NON-NLS-1$
 			dialog.setFilterPath(MAC_JAVA_SEARCH_PATH);
 			path = dialog.open();
@@ -911,7 +909,7 @@ public class InstalledJREsBlock implements IAddVMDialogRequestor, ISelectionProv
 			@Override
 			public void run(IProgressMonitor monitor) {
 				monitor.beginTask(JREMessages.InstalledJREsBlock_11, IProgressMonitor.UNKNOWN);
-				search(rootDir, locations, types, exstingLocations, monitor);
+				DetectVMInstallationsJob.search(rootDir, locations, types, exstingLocations, monitor);
 				monitor.done();
 			}
 		};
@@ -926,8 +924,8 @@ public class InstalledJREsBlock implements IAddVMDialogRequestor, ISelectionProv
 		}
 
 		if (locations.isEmpty()) {
-			String messagePath = path.replaceAll("&", "&&"); // @see bug 29855  //$NON-NLS-1$//$NON-NLS-2$
-			MessageDialog.openInformation(getShell(), JREMessages.InstalledJREsBlock_12, NLS.bind(JREMessages.InstalledJREsBlock_13, new String[]{messagePath})); //
+			String messagePath = path.replace("&", "&&"); // @see bug 29855  //$NON-NLS-1$//$NON-NLS-2$
+			MessageDialog.openInformation(getShell(), JREMessages.InstalledJREsBlock_12, NLS.bind(JREMessages.InstalledJREsBlock_13, messagePath)); //
 		} else {
 			Iterator<IVMInstallType> iter2 = types.iterator();
 			for(File location: locations) {
@@ -1030,75 +1028,6 @@ public class InstalledJREsBlock implements IAddVMDialogRequestor, ISelectionProv
 		} while (vmType.findVMInstall(id) != null || id.equals(fgLastUsedID));
 		fgLastUsedID = id;
 		return id;
-	}
-
-	/**
-	 * Searches the specified directory recursively for installed VMs, adding each
-	 * detected VM to the <code>found</code> list. Any directories specified in
-	 * the <code>ignore</code> are not traversed.
-	 */
-	protected void search(File directory, List<File> found, List<IVMInstallType> types, Set<File> ignore, IProgressMonitor monitor) {
-		if (monitor.isCanceled()) {
-			return;
-		}
-
-		String[] names = directory.list();
-		if (names == null) {
-			return;
-		}
-		List<File> subDirs = new ArrayList<>();
-		for (int i = 0; i < names.length; i++) {
-			if (monitor.isCanceled()) {
-				return;
-			}
-			File file = new File(directory, names[i]);
-			try {
-				monitor.subTask(NLS.bind(JREMessages.InstalledJREsBlock_14, new String[]{Integer.toString(found.size()),
-						file.getCanonicalPath().replaceAll("&", "&&")}));   // @see bug 29855 //$NON-NLS-1$ //$NON-NLS-2$
-			} catch (IOException e) {
-			}
-			IVMInstallType[] vmTypes = JavaRuntime.getVMInstallTypes();
-			if (file.isDirectory()) {
-				if (!ignore.contains(file)) {
-					boolean validLocation = false;
-
-					// Take the first VM install type that claims the location as a
-					// valid VM install.  VM install types should be smart enough to not
-					// claim another type's VM, but just in case...
-					for (int j = 0; j < vmTypes.length; j++) {
-						if (monitor.isCanceled()) {
-							return;
-						}
-						IVMInstallType type = vmTypes[j];
-						IStatus status = type.validateInstallLocation(file);
-						if (status.isOK()) {
-							String filePath = file.getPath();
-							int index = filePath.lastIndexOf(File.separatorChar);
-							File newFile = file;
-							// remove bin folder from install location as java executables are found only under bin for Java 9 and above
-							if (index > 0 && filePath.substring(index + 1).equals("bin")) { //$NON-NLS-1$
-								newFile = new File(filePath.substring(0, index));
-							}
-							found.add(newFile);
-							types.add(type);
-							validLocation = true;
-							break;
-						}
-					}
-					if (!validLocation) {
-						subDirs.add(file);
-					}
-				}
-			}
-		}
-		while (!subDirs.isEmpty()) {
-			File subDir = subDirs.remove(0);
-			search(subDir, found, types, ignore, monitor);
-			if (monitor.isCanceled()) {
-				return;
-			}
-		}
-
 	}
 
 	/**
