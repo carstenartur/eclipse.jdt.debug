@@ -21,6 +21,7 @@ jobs:
   versions-check-result:
     name: Publish Version Check Results
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
 
     - name: Search version increment git patch
