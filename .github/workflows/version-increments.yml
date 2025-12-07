@@ -5,6 +5,8 @@ on:
     workflows: [ 'Pull-Request Checks' ]
     types: [ completed ]
 
+permissions: {}
+
 jobs:
   publish-version-check-results:
     uses: ./.github/workflows/publishVersionCheckResults.yml
