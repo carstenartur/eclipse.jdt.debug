@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corporation and others.
+ * Copyright (c) 2000, 2024 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -142,6 +142,7 @@ public class DebugUIMessages extends NLS {
 	public static String JDIDebugUIPlugin_The_target_VM_does_not_support_hot_code_replace_1;
 	public static String JDIDebugUIPlugin_3;
     public static String JDIDebugUIPlugin_4;
+	public static String JDIDebugUIPlugin_5;
 
 	public static String JDIModelPresentation__No_explicit_return_value__30;
 	public static String JDIModelPresentation__conditional__2;
@@ -154,6 +155,7 @@ public class DebugUIMessages extends NLS {
 	public static String JDIModelPresentation__garbage_collected_object__6;
 	public static String JDIModelPresentation__obsolete_method_in__1;
 	public static String JDIModelPresentation__terminated__2;
+	public static String JDIModelPresentation_collapsed_frames;
 
 	public static String JDIModelPresentation_117;
 
@@ -177,6 +179,7 @@ public class DebugUIMessages extends NLS {
 	public static String JDIModelPresentation_target_suspended;
 	public static String JDIModelPresentation_thread_filtered;
 	public static String JDIModelPresentation_uncaught_62;
+	public static String JDIModelPresentation_resume_on_hit;
 
 	// thread label keys are built programmatically
 
@@ -243,6 +246,23 @@ public class DebugUIMessages extends NLS {
 	public static String thread_daemon_system_suspended_fieldmodification;
 	public static String thread_daemon_system_suspended_runtoline;
 	public static String thread_daemon_system_suspended_classprepare;
+
+	public static String thread_virtual_terminated;
+	public static String thread_virtual_evaluating;
+	public static String thread_virtual_running;
+	public static String thread_virtual_stepping;
+	public static String thread_virtual_suspended;
+	public static String thread_virtual_suspended_problem;
+	public static String thread_virtual_suspended_fieldaccess;
+	public static String thread_virtual_suspended_linebreakpoint;
+	public static String thread_virtual_suspended_methodentry;
+	public static String thread_virtual_suspended_exception;
+	public static String thread_virtual_suspended_exception_uncaught;
+	public static String thread_virtual_suspended_methodexit;
+	public static String thread_virtual_suspended_fieldmodification;
+	public static String thread_virtual_suspended_runtoline;
+	public static String thread_virtual_suspended_classprepare;
+
 	public static String SuspendTimeoutHandler_suspend;
 	public static String SuspendTimeoutHandler_timeout_occurred;
 	public static String JDIDebugUIPlugin_Searching_1;
@@ -291,6 +311,9 @@ public class DebugUIMessages extends NLS {
 	public static String DetailFormatterDialog_Associated_code_must_not_be_empty_3;
 	public static String DetailFormatterDialog_Detail_formatter__code_snippet__1;
 	public static String DetailFormatterDialog_17;
+	public static String DetailFormatterPrimitiveSelect;
+	public static String DetailFormatterPrimitiveSelectionTitle;
+	public static String DetailFormatterPrimitiveSelectionLabel;
 
 	public static String No_type_with_the_given_name_found_in_the_workspace__1;
 	public static String JavaDetailFormattersManager_Detail_formatter_error___1;
@@ -417,4 +440,38 @@ public class DebugUIMessages extends NLS {
 	public static String JavaVariableLabelProvider_0;
 
 	public static String JavaVariableContentAssistDescription_Keystroke;
+	public static String CompareObjectsFailed;
+	public static String ObjectsSameValue;
+	public static String ObjectsSameValueAndDifferentValue;
+	public static String DifferentValue;
+	public static String StringSame;
+	public static String StringSameAndDifferent;
+	public static String StringDifferent;
+	public static String ListSameElements;
+	public static String ListSameELementsInDiffOrder;
+	public static String MapKeysSame;
+	public static String MapValuesSame;
+	public static String DifferentDataStructures;
+	public static String DialogBoxObjectsSame;
+	public static String DialogBoxObjectsDifferent;
+	public static String DialogBoxListMissing;
+	public static String DialogBoxListItemCount;
+	public static String DialogBoxMapSame;
+	public static String DialogBoxMapKeySame;
+	public static String DialogBoxMapValSame;
+	public static String DialogBoxMapMissingVal;
+	public static String DialogBoxMapMissingKey;
+	public static String ComparisionMultiHeader;
+	public static String ObjectComparisonTitle_long;
+	public static String ObjectComparisonTitle_failed;
+	public static String ObjectComparisonTitle_short;
+	public static String ObjectsSame;
+	public static String CompareObjectsReference;
+	public static String ObjectsReferenceDifferent;
+	public static String ObjectsReferenceSameAndDifferent;
+	public static String ObjectsExtractedSame;
+	public static String CompareObjectsFailedException;
+
+	public static String ListSameElementsFor2;
+	public static String fExceptionBreakpointMsg;
 }

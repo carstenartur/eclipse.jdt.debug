@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2005, 2017 IBM Corporation and others.
+ * Copyright (c) 2005, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -18,16 +18,20 @@ import java.util.Set;
 
 import org.eclipse.debug.core.DebugException;
 import org.eclipse.debug.core.model.IValue;
+import org.eclipse.jdt.debug.core.IJavaArray;
 import org.eclipse.jdt.debug.core.IJavaArrayType;
 import org.eclipse.jdt.debug.core.IJavaClassType;
 import org.eclipse.jdt.debug.core.IJavaDebugTarget;
 import org.eclipse.jdt.debug.core.IJavaFieldVariable;
 import org.eclipse.jdt.debug.core.IJavaObject;
+import org.eclipse.jdt.debug.core.IJavaPrimitiveValue;
 import org.eclipse.jdt.debug.core.IJavaType;
 import org.eclipse.jdt.debug.core.IJavaVariable;
+import org.eclipse.jdt.internal.debug.core.model.JDILocalVariable;
 import org.eclipse.jdt.internal.debug.core.model.JDINullValue;
 import org.eclipse.jdt.internal.debug.core.model.JDIObjectValue;
 import org.eclipse.jdt.internal.debug.core.model.JDIPlaceholderValue;
+import org.eclipse.jdt.internal.debug.core.model.JDIPrimitiveValue;
 import org.eclipse.jdt.internal.debug.core.model.JDIReferenceListVariable;
 import org.eclipse.jdt.internal.debug.ui.display.JavaInspectExpression;
 import org.eclipse.ui.IActionFilter;
@@ -45,6 +49,7 @@ public class JavaVarActionFilter implements IActionFilter {
 	 * The set or primitive types
 	 */
 	private static final Set<String> fgPrimitiveTypes = initPrimitiveTypes();
+	private static final Set<String> fgArrays = initArrays();
 
 	/**
 	 * The predefined set of primitive types
@@ -65,8 +70,28 @@ public class JavaVarActionFilter implements IActionFilter {
 	}
 
 	/**
+	 * The predefined set of primitive arrays
+	 *
+	 * @return the set of predefined primitive arrays types
+	 */
+	private static Set<String> initArrays() {
+		HashSet<String> set = new HashSet<>(8);
+		set.add("short[]"); //$NON-NLS-1$
+		set.add("int[]"); //$NON-NLS-1$
+		set.add("long[]"); //$NON-NLS-1$
+		set.add("float[]"); //$NON-NLS-1$
+		set.add("double[]"); //$NON-NLS-1$
+		set.add("boolean[]"); //$NON-NLS-1$
+		set.add("byte[]"); //$NON-NLS-1$
+		set.add("char[]"); //$NON-NLS-1$
+		return set;
+	}
+
+	/**
 	 * Determines if the declared value is the same as the concrete value
-	 * @param var the variable to inspect
+	 *
+	 * @param var
+	 *            the variable to inspect
 	 * @return true if the types are the same, false otherwise
 	 */
 	protected boolean isDeclaredSameAsConcrete(IJavaVariable var) {
@@ -205,6 +230,13 @@ public class JavaVarActionFilter implements IActionFilter {
 					if (value.equals("isFieldVariable")) { //$NON-NLS-1$
 						return var instanceof IJavaFieldVariable;
 					}
+					if (value.equals("isLocalVariableValue")) { //$NON-NLS-1$
+						return !(var instanceof JDILocalVariable);
+					}
+					if (value.equals("isNonPrimitiveNonArray")) { //$NON-NLS-1$
+						boolean primArray = fgArrays.contains(var.getJavaType().getName());
+						return (varValue instanceof JDIPrimitiveValue || primArray);
+					}
 				}
 				else if (name.equals("ConcreteVariableActionFilter") && value.equals("isConcrete")) { //$NON-NLS-1$ //$NON-NLS-2$
 					return isDeclaredSameAsConcrete(var);
@@ -226,6 +258,14 @@ public class JavaVarActionFilter implements IActionFilter {
 					}
 					if(value.equals("inSuperclass")) { //$NON-NLS-1$
 						return JavaDetailFormattersManager.getDefault().hasSuperclassDetailFormatter(((IJavaObject)varValue).getJavaType());
+					}
+				} else if (name.equals("DetailFormatterFilter") && (varValue instanceof IJavaPrimitiveValue javaPrime)) { //$NON-NLS-1$
+					if (value.equals("isDefined")) { //$NON-NLS-1$
+						return JavaDetailFormattersManager.getDefault().hasAssociatedDetailFormatter(javaPrime.getJavaType());
+					}
+				} else if (name.equals("DetailFormatterFilter") && (varValue instanceof IJavaArray javaArray)) { //$NON-NLS-1$
+					if (value.equals("isDefined")) { //$NON-NLS-1$
+						return JavaDetailFormattersManager.getDefault().hasAssociatedDetailFormatter(javaArray.getJavaType());
 					}
 				}
 			} catch (DebugException e) {}

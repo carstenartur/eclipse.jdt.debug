@@ -19,7 +19,6 @@ package org.eclipse.jdt.internal.launching;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -178,31 +177,18 @@ public class JREContainerInitializer extends ClasspathContainerInitializer {
 		}
 		IVMInstall vm = environment.getDefaultVM();
 		if (vm == null) {
-			IVMInstall[] installs = environment.getCompatibleVMs();
-			// take the first strictly compatible VM if there is no default
-			if (installs.length == 0 && LaunchingPlugin.DEBUG_JRE_CONTAINER) {
-				LaunchingPlugin.trace("\t*** NO COMPATIBLE VMS ***"); //$NON-NLS-1$
-			}
-			for (int i = 0; i < installs.length; i++) {
-				IVMInstall install = installs[i];
-				if (environment.isStrictlyCompatible(install)) {
-					vm = install;
-					if (LaunchingPlugin.DEBUG_JRE_CONTAINER) {
-						LaunchingPlugin.trace("\tPerfect Match: " + vm.getName()); //$NON-NLS-1$
-					}
-					break;
-				}
-			}
-			//try the default VM install: https://bugs.eclipse.org/bugs/show_bug.cgi?id=371300
-			// if default vm is a match https://bugs.eclipse.org/bugs/show_bug.cgi?id=484026
-			if (vm == null && installs.length > 0 && Arrays.asList(installs).contains(JavaRuntime.getDefaultVMInstall())) {
-				vm = JavaRuntime.getDefaultVMInstall();
-			}
-			// use the first VM failing that
-			if (vm == null && installs.length > 0) {
-				vm = installs[0];
+			vm = environment.getCompatibleVM();
+			if (vm == null) {
 				if (LaunchingPlugin.DEBUG_JRE_CONTAINER) {
-					LaunchingPlugin.trace("\tFirst Match: " + vm.getName()); //$NON-NLS-1$
+					LaunchingPlugin.trace("\t*** NO COMPATIBLE VMS *** for " + environment.getId()); //$NON-NLS-1$
+				}
+				return null;
+			}
+			if (LaunchingPlugin.DEBUG_JRE_CONTAINER) {
+				if (environment.isStrictlyCompatible(vm)) {
+					LaunchingPlugin.trace("\tPerfect Match: " + vm.getName()); //$NON-NLS-1$
+				} else {
+					LaunchingPlugin.trace("\tUse compatible VM: " + vm.getName()); //$NON-NLS-1$
 				}
 			}
 		} else {
@@ -335,7 +321,7 @@ public class JREContainerInitializer extends ClasspathContainerInitializer {
 	public void requestClasspathContainerUpdate(IPath containerPath, IJavaProject project, IClasspathContainer containerSuggestion) throws CoreException {
 		IVMInstall vm = resolveVM(containerPath);
 		if (vm == null) {
-			IStatus status = new Status(IStatus.ERROR, LaunchingPlugin.getUniqueIdentifier(), IJavaLaunchConfigurationConstants.ERR_VM_INSTALL_DOES_NOT_EXIST, NLS.bind(LaunchingMessages.JREContainerInitializer_JRE_referenced_by_classpath_container__0__does_not_exist__1, new String[]{containerPath.toString()}), null);
+			IStatus status = new Status(IStatus.ERROR, LaunchingPlugin.getUniqueIdentifier(), IJavaLaunchConfigurationConstants.ERR_VM_INSTALL_DOES_NOT_EXIST, NLS.bind(LaunchingMessages.JREContainerInitializer_JRE_referenced_by_classpath_container__0__does_not_exist__1, containerPath.toString()), null);
 			throw new CoreException(status);
 		}
 		// update of the VM with new library locations
@@ -383,11 +369,11 @@ public class JREContainerInitializer extends ClasspathContainerInitializer {
 					}
 					libs[i] = new LibraryLocation(path, srcPath, rootPath, javadocLocation, null, externalAnnotations);
 				} else {
-					IStatus status = new Status(IStatus.ERROR, LaunchingPlugin.getUniqueIdentifier(), IJavaLaunchConfigurationConstants.ERR_INTERNAL_ERROR, NLS.bind(LaunchingMessages.JREContainerInitializer_Classpath_entry__0__does_not_refer_to_an_existing_library__2, new String[]{entry.getPath().toString()}), null);
+					IStatus status = new Status(IStatus.ERROR, LaunchingPlugin.getUniqueIdentifier(), IJavaLaunchConfigurationConstants.ERR_INTERNAL_ERROR, NLS.bind(LaunchingMessages.JREContainerInitializer_Classpath_entry__0__does_not_refer_to_an_existing_library__2, entry.getPath().toString()), null);
 					throw new CoreException(status);
 				}
 			} else {
-				IStatus status = new Status(IStatus.ERROR, LaunchingPlugin.getUniqueIdentifier(), IJavaLaunchConfigurationConstants.ERR_INTERNAL_ERROR, NLS.bind(LaunchingMessages.JREContainerInitializer_Classpath_entry__0__does_not_refer_to_a_library__3, new String[]{entry.getPath().toString()}), null);
+				IStatus status = new Status(IStatus.ERROR, LaunchingPlugin.getUniqueIdentifier(), IJavaLaunchConfigurationConstants.ERR_INTERNAL_ERROR, NLS.bind(LaunchingMessages.JREContainerInitializer_Classpath_entry__0__does_not_refer_to_a_library__3, entry.getPath().toString()), null);
 				throw new CoreException(status);
 			}
 		}
@@ -407,7 +393,7 @@ public class JREContainerInitializer extends ClasspathContainerInitializer {
 			tag = getVMName(containerPath);
 		}
 		if (tag != null) {
-			return NLS.bind(LaunchingMessages.JREContainer_JRE_System_Library_1, new String[]{tag});
+			return NLS.bind(LaunchingMessages.JREContainer_JRE_System_Library_1, tag);
 		}
 		return LaunchingMessages.JREContainerInitializer_Default_System_Library_1;
 	}

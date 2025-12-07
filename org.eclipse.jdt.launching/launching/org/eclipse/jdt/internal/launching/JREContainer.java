@@ -97,8 +97,7 @@ public class JREContainer implements IClasspathContainer {
 		 */
 		@Override
 		public boolean equals(Object obj) {
-			if (obj instanceof RuleKey) {
-				RuleKey key = (RuleKey) obj;
+			if (obj instanceof RuleKey key) {
 				return fEnvironmentId.equals(key.fEnvironmentId) && fInstall.equals(key.fInstall);
 			}
 			return false;
@@ -236,8 +235,7 @@ public class JREContainer implements IClasspathContainer {
 			 * @param obj an object which should be castable to IVMInstall
 			 */
 			private void removeRuleEntry(Object obj) {
-				if(obj instanceof IVMInstall) {
-					IVMInstall install = (IVMInstall) obj;
+				if (obj instanceof IVMInstall install) {
 					fgClasspathEntriesWithRules.keySet().removeIf(key -> key.fInstall.equals(install));
 				}
 			}
@@ -406,7 +404,7 @@ public class JREContainer implements IClasspathContainer {
 		} else {
 			tag = environmentId;
 		}
-		return NLS.bind(LaunchingMessages.JREContainer_JRE_System_Library_1, new String[]{tag});
+		return NLS.bind(LaunchingMessages.JREContainer_JRE_System_Library_1, tag);
 	}
 
 	/**

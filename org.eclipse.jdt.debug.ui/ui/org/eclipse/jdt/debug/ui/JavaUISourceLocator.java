@@ -77,6 +77,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * Identifier for the 'Prompting Java Source Locator' extension
 	 * (value <code>"org.eclipse.jdt.debug.ui.javaSourceLocator"</code>).
 	 */
+	@Deprecated
 	public static final String ID_PROMPTING_JAVA_SOURCE_LOCATOR = IJavaDebugUIConstants.PLUGIN_ID + ".javaSourceLocator"; //$NON-NLS-1$
 
 	/**
@@ -86,6 +87,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 *
 	 * @since 2.1
 	 */
+	@Deprecated
 	public static final String ATTR_FIND_ALL_SOURCE_ELEMENTS = IJavaDebugUIConstants.PLUGIN_ID + ".ATTR_FIND_ALL_SOURCE_ELEMENTS"; //$NON-NLS-1$
 
 	/**
@@ -120,6 +122,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	/**
 	 * Constructs an empty source locator.
 	 */
+	@Deprecated
 	public JavaUISourceLocator() {
 		fSourceLocator = new JavaSourceLocator();
 		fAllowedToAsk = true;
@@ -135,6 +138,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * 	as well
 	 * @throws CoreException if the underlying {@link JavaSourceLocator} fails to be created
 	 */
+	@Deprecated
 	public JavaUISourceLocator(IJavaProject[] projects,	boolean includeRequired) throws CoreException {
 		fSourceLocator = new JavaSourceLocator(projects, includeRequired);
 		fAllowedToAsk = true;
@@ -150,6 +154,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * @exception CoreException if unable to read the project's
 	 * 	 build path
 	 */
+	@Deprecated
 	public JavaUISourceLocator(IJavaProject project) throws CoreException {
 		fJavaProject = project;
 		IJavaSourceLocation[] sls =
@@ -164,6 +169,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	/**
 	 * @see org.eclipse.debug.core.model.ISourceLocator#getSourceElement(IStackFrame)
 	 */
+	@Deprecated
 	@Override
 	public Object getSourceElement(IStackFrame stackFrame) {
 		Object res = findSourceElement(stackFrame);
@@ -202,7 +208,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 				// prompt
 				TwoPaneElementSelector dialog = new TwoPaneElementSelector(JDIDebugUIPlugin.getActiveWorkbenchShell(), new SourceElementLabelProvider(),new SourceElementQualifierProvider());
 				dialog.setTitle(DebugUIMessages.JavaUISourceLocator_Select_Source_1);
-				dialog.setMessage(NLS.bind(DebugUIMessages.JavaUISourceLocator__Select_the_source_that_corresponds_to__0__2, new String[]{type.getName()}));
+				dialog.setMessage(NLS.bind(DebugUIMessages.JavaUISourceLocator__Select_the_source_that_corresponds_to__0__2, type.getName()));
 				dialog.setElements(sourceElements);
 				dialog.setMultipleSelection(false);
 				dialog.setUpperListLabel(DebugUIMessages.JavaUISourceLocator__Matching_files__3);
@@ -250,7 +256,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 			@Override
 			public void run() {
 				try {
-					String message = NLS.bind(LauncherMessages.JavaUISourceLocator_selectprojects_message, new String[] {frame.getDeclaringTypeName()});
+					String message = NLS.bind(LauncherMessages.JavaUISourceLocator_selectprojects_message, frame.getDeclaringTypeName());
 
 					ILaunchConfiguration configuration =
 						frame.getLaunch().getLaunchConfiguration();
@@ -280,6 +286,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	/**
 	 * @see IPersistableSourceLocator#getMemento()
 	 */
+	@Deprecated
 	@Override
 	public String getMemento() throws CoreException {
 		String memento = fSourceLocator.getMemento();
@@ -300,6 +307,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	/**
 	 * @see IPersistableSourceLocator#initializeDefaults(ILaunchConfiguration)
 	 */
+	@Deprecated
 	@Override
 	public void initializeDefaults(ILaunchConfiguration configuration)
 		throws CoreException {
@@ -312,6 +320,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	/**
 	 * @see IPersistableSourceLocator#initializeFromMemento(String)
 	 */
+	@Deprecated
 	@Override
 	public void initializeFromMemento(String memento) throws CoreException {
 		if (memento.startsWith("<project>")) { //$NON-NLS-1$
@@ -322,10 +331,10 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 				index = memento.indexOf("</findAll>", start); //$NON-NLS-1$
 				if (index > 0) {
 					String findAll = memento.substring(start, index);
-					Boolean all = Boolean.valueOf(findAll);
+					boolean all = Boolean.parseBoolean(findAll);
 					String rest = memento.substring(index + 10);
 					fJavaProject = (IJavaProject) JavaCore.create(handle);
-					fIsFindAllSourceElements = all.booleanValue();
+					fIsFindAllSourceElements = all;
 					fSourceLocator.initializeFromMemento(rest);
 				}
 			}
@@ -347,6 +356,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * @return the locations that this source locator is currently
 	 * searching, in the order that they are searched
 	 */
+	@Deprecated
 	public IJavaSourceLocation[] getSourceLocations() {
 		return fSourceLocator.getSourceLocations();
 	}
@@ -359,6 +369,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * @param locations the locations that will be searched, in the order
 	 *  to be searched
 	 */
+	@Deprecated
 	public void setSourceLocations(IJavaSourceLocation[] locations) {
 		fSourceLocator.setSourceLocations(locations);
 	}
@@ -374,6 +385,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * source elements that correspond to a stack frame
 	 * @since 2.1
 	 */
+	@Deprecated
 	public boolean isFindAllSourceElements() {
 		return fIsFindAllSourceElements;
 	}
@@ -386,6 +398,7 @@ public class JavaUISourceLocator implements IPersistableSourceLocator {
 	 * elements that correspond to a stack frame
 	 * @since 2.1
 	 */
+	@Deprecated
 	public void setFindAllSourceElement(boolean findAll) {
 		fIsFindAllSourceElements = findAll;
 	}

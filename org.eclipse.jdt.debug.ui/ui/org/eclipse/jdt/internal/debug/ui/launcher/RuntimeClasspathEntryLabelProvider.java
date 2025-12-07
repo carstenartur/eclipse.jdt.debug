@@ -37,6 +37,7 @@ import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jdt.launching.JavaRuntime;
 import org.eclipse.jdt.ui.ISharedImages;
 import org.eclipse.jdt.ui.JavaUI;
+import org.eclipse.jface.util.Util;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
 import org.eclipse.osgi.util.NLS;
@@ -139,10 +140,10 @@ public class RuntimeClasspathEntryLabelProvider extends LabelProvider {
 			case IRuntimeClasspathEntry.ARCHIVE:
 				IPath path = entry.getPath();
 				if (path == null) {
-                    return NLS.bind(LauncherMessages.RuntimeClasspathEntryLabelProvider_Invalid_path, new String[]{"null"}); //$NON-NLS-1$
+					return NLS.bind(LauncherMessages.RuntimeClasspathEntryLabelProvider_Invalid_path, "null"); //$NON-NLS-1$
                 }
                 if (!path.isAbsolute() || !path.isValidPath(path.toString())) {
-					return NLS.bind(LauncherMessages.RuntimeClasspathEntryLabelProvider_Invalid_path, new String[]{path.toOSString()});
+					return NLS.bind(LauncherMessages.RuntimeClasspathEntryLabelProvider_Invalid_path, path.toOSString());
 				}
 				String[] segments = path.segments();
 				StringBuilder displayPath = new StringBuilder();
@@ -223,7 +224,7 @@ public class RuntimeClasspathEntryLabelProvider extends LabelProvider {
 				}
 				return name;
 		}
-		return ""; //$NON-NLS-1$
+		return Util.ZERO_LENGTH_STRING;
 	}
 
 	/* (non-Javadoc)

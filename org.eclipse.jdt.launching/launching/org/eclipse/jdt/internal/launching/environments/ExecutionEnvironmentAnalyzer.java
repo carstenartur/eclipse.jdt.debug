@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2024 IBM Corporation and others.
+ * Copyright (c) 2006, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -41,6 +41,9 @@ public class ExecutionEnvironmentAnalyzer implements IExecutionEnvironmentAnalyz
 
 	// XXX: Note that this string is not yet standardized by OSGi, see http://wiki.osgi.org/wiki/Execution_Environment
 
+	private static final String JavaSE_26 = "JavaSE-26"; //$NON-NLS-1$
+	private static final String JavaSE_25 = "JavaSE-25"; //$NON-NLS-1$
+	private static final String JavaSE_24 = "JavaSE-24"; //$NON-NLS-1$
 	private static final String JavaSE_23 = "JavaSE-23"; //$NON-NLS-1$
 	private static final String JavaSE_22 = "JavaSE-22"; //$NON-NLS-1$
 	private static final String JavaSE_21 = "JavaSE-21"; //$NON-NLS-1$
@@ -97,7 +100,7 @@ public class ExecutionEnvironmentAnalyzer implements IExecutionEnvironmentAnalyz
 		mappings.put(JavaSE_1_8, new String[] { JavaSE_1_7 });
 		mappings.put(JavaSE_9, new String[] { JavaSE_1_8 });
 		mappings.put(JavaSE_10, new String[] { JavaSE_9 });
-		mappings.put(JavaSE_10_Plus, new String[] { JavaSE_23 });
+		mappings.put(JavaSE_10_Plus, new String[] { JavaSE_25 });
 		mappings.put(JavaSE_11, new String[] { JavaSE_10 });
 		mappings.put(JavaSE_12, new String[] { JavaSE_11 });
 		mappings.put(JavaSE_13, new String[] { JavaSE_12 });
@@ -111,6 +114,9 @@ public class ExecutionEnvironmentAnalyzer implements IExecutionEnvironmentAnalyz
 		mappings.put(JavaSE_21, new String[] { JavaSE_20 });
 		mappings.put(JavaSE_22, new String[] { JavaSE_21 });
 		mappings.put(JavaSE_23, new String[] { JavaSE_22 });
+		mappings.put(JavaSE_24, new String[] { JavaSE_23 });
+		mappings.put(JavaSE_25, new String[] { JavaSE_24 });
+		mappings.put(JavaSE_26, new String[] { JavaSE_25 });
 	}
 	@Override
 	public CompatibleEnvironment[] analyze(IVMInstall vm, IProgressMonitor monitor) throws CoreException {
@@ -136,7 +142,13 @@ public class ExecutionEnvironmentAnalyzer implements IExecutionEnvironmentAnalyz
 					types = getTypes(CDC_FOUNDATION_1_1);
 				}
 			} else {
-				if (javaVersion.startsWith("23")) { //$NON-NLS-1$
+				if (javaVersion.startsWith("26")) { //$NON-NLS-1$
+					types = getTypes(JavaSE_26);
+				} else if (javaVersion.startsWith("25")) { //$NON-NLS-1$
+					types = getTypes(JavaSE_25);
+				} else if (javaVersion.startsWith("24")) { //$NON-NLS-1$
+					types = getTypes(JavaSE_24);
+				} else if (javaVersion.startsWith("23")) { //$NON-NLS-1$
 					types = getTypes(JavaSE_23);
 				} else if (javaVersion.startsWith("22")) { //$NON-NLS-1$
 					types = getTypes(JavaSE_22);

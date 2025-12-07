@@ -59,7 +59,11 @@ public class SelectImportsDialog extends TitleAreaDialog {
 
 			@Override
 			public void setStoredFilters(IPreferenceStore store, Filter[] filters) {
-				fEditor.setImports(imports);
+				String[] newImports = new String[filters.length];
+				for (int i = 0; i < filters.length; i++) {
+					newImports[i] = filters[i].getName();
+				}
+				fEditor.setImports(newImports);
 			}
 
 		},
@@ -95,8 +99,8 @@ public class SelectImportsDialog extends TitleAreaDialog {
 	 */
 	@Override
 	protected Control createDialogArea(Composite parent) {
-		setTitle(NLS.bind(SnippetMessages.getString("SelectImportsDialog.Manage_the_Java_Snippet_Editor_Imports_for___{0}__1"), new String[]{fEditor.getEditorInput().getName()})); //$NON-NLS-1$
-		setMessage(NLS.bind(SnippetMessages.getString("SelectImportsDialog.add_remove_imports"), new String[]{fEditor.getEditorInput().getName()})); //$NON-NLS-1$
+		setTitle(NLS.bind(SnippetMessages.getString("SelectImportsDialog.Manage_the_Java_Snippet_Editor_Imports_for___{0}__1"), fEditor.getEditorInput().getName())); //$NON-NLS-1$
+		setMessage(NLS.bind(SnippetMessages.getString("SelectImportsDialog.add_remove_imports"), fEditor.getEditorInput().getName())); //$NON-NLS-1$
 		Composite outer = SWTFactory.createComposite(parent, 2, 1, GridData.FILL_BOTH);
 		GridLayout gl = (GridLayout) outer.getLayout();
 		gl.marginLeft = 7;

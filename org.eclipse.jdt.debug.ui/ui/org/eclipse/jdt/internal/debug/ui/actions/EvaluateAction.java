@@ -62,6 +62,7 @@ import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.Region;
+import org.eclipse.jface.util.Util;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -517,7 +518,7 @@ public abstract class EvaluateAction implements IEvaluationListener, IWorkbenchW
 		IDataDisplay dataDisplay= getDirectDataDisplay();
 		if (dataDisplay != null) {
 			if (message.length() != 0) {
-				dataDisplay.displayExpressionValue(NLS.bind(ActionMessages.EvaluateAction__evaluation_failed__Reason, new String[] {format(message)}));
+				dataDisplay.displayExpressionValue(NLS.bind(ActionMessages.EvaluateAction__evaluation_failed__Reason, format(message)));
 			} else {
 				dataDisplay.displayExpressionValue(ActionMessages.EvaluateAction__evaluation_failed__1);
 			}
@@ -576,7 +577,7 @@ public abstract class EvaluateAction implements IEvaluationListener, IWorkbenchW
 	}
 
 	protected String getErrorMessage(String[] errors) {
-		String message= ""; //$NON-NLS-1$
+		String message = Util.ZERO_LENGTH_STRING;
 		for (int i= 0; i < errors.length; i++) {
 			String msg= errors[i];
 			if (i == 0) {

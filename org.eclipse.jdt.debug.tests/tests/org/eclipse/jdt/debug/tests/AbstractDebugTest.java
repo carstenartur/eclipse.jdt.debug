@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -181,7 +181,10 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	public static final String ONESIX_PROJECT_NAME = "One_Six";
 	public static final String TWENTYONE_PROJECT_NAME = "Two_One";
 	public static final String TWENTYTHREE_PROJECT_NAME = "Two_Three";
+	public static final String TWENTYFOUR_PROJECT_NAME = "Two_Four";
+	public static final String TWENTYFIVE_PROJECT_NAME = "Two_Five";
 	public static final String BOUND_JRE_PROJECT_NAME = "BoundJRE";
+	public static final String MR_PROJECT_NAME = "MR";
 	public static final String CLONE_SUFFIX = "Clone";
 
 	final String[] LAUNCH_CONFIG_NAMES_1_4 = { "LargeSourceFile", "LotsOfFields",
@@ -204,7 +207,8 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 			"StepResult2", "StepResult3", "StepUncaught", "TriggerPoint_01", "BulkThreadCreationTest", "MethodExitAndException",
 			"Bug534319earlyStart", "Bug534319lateStart", "Bug534319singleThread", "Bug534319startBetwen", "MethodCall", "Bug538303", "Bug540243",
 			"OutSync", "OutSync2", "ConsoleOutputUmlaut", "ErrorRecurrence", "ModelPresentationTests", "Bug565982",
-			"SuspendVMConditionalBreakpointsTestSnippet", "FileConditionSnippet2" };
+			"SuspendVMConditionalBreakpointsTestSnippet", "FileConditionSnippet2", "compare.CompareObjectsStringTest", "compare.CompareListObjects",
+			"compare.CompareMapObjects", "compare.CompareSetObjects", "compare.CompareNormalObjects", "compare.CompareArrayObjects" };
 
 	/**
 	 * the default timeout
@@ -240,9 +244,12 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	private static boolean loaded16_ = false;
 	private static boolean loaded21 = false;
 	private static boolean loaded23 = false;
+	private static boolean loaded24 = false;
+	private static boolean loaded25 = false;
 	private static boolean loadedEE = false;
 	private static boolean loadedJRE = false;
 	private static boolean loadedMulti = false;
+	private static boolean loadedMR;
 	private static boolean welcomeClosed = false;
 
 	/**
@@ -257,7 +264,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 
 	@Override
 	protected void setUp() throws Exception {
-		TestUtil.log(IStatus.INFO, getName(), "setUp");
+		TestUtil.logInfo("SETUP " + getClass().getSimpleName() + "." + getName());
 		super.setUp();
 		setPreferences();
 		IProject pro = ResourcesPlugin.getWorkspace().getRoot().getProject(ONE_FOUR_PROJECT_NAME);
@@ -280,6 +287,8 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		loadedEE = pro.exists();
 		pro = ResourcesPlugin.getWorkspace().getRoot().getProject(MULTI_OUTPUT_PROJECT_NAME);
 		loadedMulti = pro.exists();
+		pro = ResourcesPlugin.getWorkspace().getRoot().getProject(MR_PROJECT_NAME);
+		loadedMR = pro.exists();
 		assertWelcomeScreenClosed();
 	}
 
@@ -404,9 +413,11 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 				cfgs.add(createLaunchConfiguration(jp, "a.b.c.bug329294WithGenerics"));
 				cfgs.add(createLaunchConfiguration(jp, "a.b.c.bug403028"));
 				cfgs.add(createLaunchConfiguration(jp, "a.b.c.bug484686"));
+				cfgs.add(createLaunchConfiguration(jp, "a.b.c.PrimitivesTest"));
 				cfgs.add(createLaunchConfiguration(jp, "a.b.c.GenericMethodEntryTest"));
 				cfgs.add(createLaunchConfiguration(jp, "org.eclipse.debug.tests.targets.HcrClass", true));
 				cfgs.add(createLaunchConfiguration(jp, "a.b.c.Bug570988"));
+				cfgs.add(createLaunchConfiguration(jp, "a.b.c.ExceptionDefaultTest"));
 				loaded15 = true;
 				waitForBuild();
 	        }
@@ -619,20 +630,49 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		}
 	}
 
-	/**
-	 * Creates the Java 23 compliant project
-	 */
+	synchronized void assertMRProject() {
+		IJavaProject jp = null;
+		ArrayList<ILaunchConfiguration> cfgs = new ArrayList<>(1);
+		try {
+			if (!loadedMR) {
+				jp = createProject(MR_PROJECT_NAME, JavaProjectHelper.TEST_MR_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_21_EE_NAME, false);
+				jp.setOption(JavaCore.COMPILER_RELEASE, JavaCore.ENABLED);
+				jp.setOption(JavaCore.COMPILER_COMPLIANCE, "11");
+				jp.setOption(JavaCore.COMPILER_SOURCE, "11");
+				jp.setOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, "11");
+				IPackageFragmentRoot src17 = JavaProjectHelper.addSourceContainer(jp, "src17", JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, "17"));
+				IPackageFragmentRoot src21 = JavaProjectHelper.addSourceContainer(jp, "src21", JavaCore.newClasspathAttribute(IClasspathAttribute.RELEASE, "21"));
+				File root = JavaTestPlugin.getDefault().getFileInPlugin(JavaProjectHelper.TEST_MR_SRC_DIR);
+				JavaProjectHelper.importFilesFromDirectory(new File(root, src17.getPath().lastSegment()), src17.getPath(), null);
+				JavaProjectHelper.importFilesFromDirectory(new File(root, src21.getPath().lastSegment()), src21.getPath(), null);
+				cfgs.add(createLaunchConfiguration(jp, "p.Main"));
+				loadedMR = true;
+				waitForBuild();
+			}
+		} catch (Exception e) {
+			try {
+				if (jp != null) {
+					jp.getProject().delete(true, true, null);
+					for (int i = 0; i < cfgs.size(); i++) {
+						cfgs.get(i).delete();
+					}
+				}
+			} catch (CoreException ce) {
+				// ignore
+			}
+			handleProjectCreationException(e, MR_PROJECT_NAME, jp);
+		}
+	}
+
 	synchronized void assert23Project() {
 		IJavaProject jp = null;
 		ArrayList<ILaunchConfiguration> cfgs = new ArrayList<>(1);
 		try {
 			if (!loaded23) {
 				jp = createProject(TWENTYTHREE_PROJECT_NAME, JavaProjectHelper.TEST_23_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_23_EE_NAME, false);
-				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.ENABLED);
 				jp.setOption(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_23);
 				jp.setOption(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_23);
-				cfgs.add(createLaunchConfiguration(jp, "Main1"));
-				cfgs.add(createLaunchConfiguration(jp, "Main2"));
+				cfgs.add(createLaunchConfiguration(jp, "Main21"));
 				loaded23 = true;
 				waitForBuild();
 				assertNoErrorMarkersExist(jp.getProject());
@@ -649,6 +689,73 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 				// ignore
 			}
 			handleProjectCreationException(e, TWENTYTHREE_PROJECT_NAME, jp);
+		}
+	}
+
+	/**
+	 * Creates the Java 24 compliant project
+	 */
+	synchronized void assert24Project() {
+		IJavaProject jp = null;
+		ArrayList<ILaunchConfiguration> cfgs = new ArrayList<>(1);
+		try {
+			if (!loaded24) {
+				jp = createProject(TWENTYFOUR_PROJECT_NAME, JavaProjectHelper.TEST_24_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_24_EE_NAME, false);
+				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.ENABLED);
+				jp.setOption(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_24);
+				jp.setOption(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_24);
+				jp.setOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_24);
+				cfgs.add(createLaunchConfiguration(jp, "Main21"));
+				loaded24 = true;
+				waitForBuild();
+				assertNoErrorMarkersExist(jp.getProject());
+			}
+		} catch (Exception e) {
+			try {
+				if (jp != null) {
+					jp.getProject().delete(true, true, null);
+					for (int i = 0; i < cfgs.size(); i++) {
+						cfgs.get(i).delete();
+					}
+				}
+			} catch (CoreException ce) {
+				// ignore
+			}
+			handleProjectCreationException(e, TWENTYFOUR_PROJECT_NAME, jp);
+		}
+	}
+
+	/**
+	 * Creates the Java 25 compliant project
+	 */
+	synchronized void assert25Project() {
+		IJavaProject jp = null;
+		ArrayList<ILaunchConfiguration> cfgs = new ArrayList<>(1);
+		try {
+			if (!loaded25) {
+				jp = createProject(TWENTYFIVE_PROJECT_NAME, JavaProjectHelper.TEST_25_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_25_EE_NAME, false);
+				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.ENABLED);
+				jp.setOption(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_25);
+				jp.setOption(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_25);
+				jp.setOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_25);
+				cfgs.add(createLaunchConfiguration(jp, "Main1"));
+				cfgs.add(createLaunchConfiguration(jp, "Main2"));
+				loaded25 = true;
+				waitForBuild();
+				assertNoErrorMarkersExist(jp.getProject());
+			}
+		} catch (Exception e) {
+			try {
+				if (jp != null) {
+					jp.getProject().delete(true, true, null);
+					for (int i = 0; i < cfgs.size(); i++) {
+						cfgs.get(i).delete();
+					}
+				}
+			} catch (CoreException ce) {
+				// ignore
+			}
+			handleProjectCreationException(e, TWENTYFIVE_PROJECT_NAME, jp);
 		}
 	}
 
@@ -693,9 +800,9 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		        JavaProjectHelper.addSourceContainer(jp, JavaProjectHelper.SRC_DIR, JavaProjectHelper.BIN_DIR);
 
 		        // add VM specific JRE container
-				IExecutionEnvironment j2se14 = JavaRuntime.getExecutionEnvironmentsManager().getEnvironment(JavaProjectHelper.JAVA_SE_1_8_EE_NAME);
-		        assertNotNull("Missing J2SE-1.4 environment", j2se14);
-		        IPath path = JavaRuntime.newJREContainerPath(j2se14);
+				IExecutionEnvironment javase1_8 = JavaRuntime.getExecutionEnvironmentsManager().getEnvironment(JavaProjectHelper.JAVA_SE_1_8_EE_NAME);
+				assertNotNull("Missing JavaSE-1.8 environment", javase1_8);
+				IPath path = JavaRuntime.newJREContainerPath(javase1_8);
 		        JavaProjectHelper.addContainerEntry(jp, path);
 		        loadedEE = true;
 		        waitForBuild();
@@ -789,7 +896,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		}
 	}
 
-	void handleProjectCreationException(Exception e, String pname, IJavaProject jp) {
+	protected void handleProjectCreationException(Exception e, String pname, IJavaProject jp) {
 		StringWriter buf = new StringWriter();
 		String msg = e.getMessage();
     	if(msg == null) {
@@ -949,6 +1056,16 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
+	 * Returns the 'multirelease' project, used for Multirelease tests.
+	 *
+	 * @return the test project
+	 */
+	protected IJavaProject getMultireleaseProject() {
+		assertMRProject();
+		return getJavaProject(MR_PROJECT_NAME);
+	}
+
+	/**
 	 * Returns the 'Two_Three' project, used for Java 23 tests.
 	 *
 	 * @return the test project
@@ -956,6 +1073,26 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	protected IJavaProject get23Project() {
 		assert23Project();
 		return getJavaProject(TWENTYTHREE_PROJECT_NAME);
+	}
+
+	/**
+	 * Returns the 'Two_Four' project, used for Java 24 tests.
+	 *
+	 * @return the test project
+	 */
+	protected IJavaProject get24Project() {
+		assert24Project();
+		return getJavaProject(TWENTYFOUR_PROJECT_NAME);
+	}
+
+	/**
+	 * Returns the 'Two_Five' project, used for Java 25 tests.
+	 *
+	 * @return the test project
+	 */
+	protected IJavaProject get25Project() {
+		assert25Project();
+		return getJavaProject(TWENTYFIVE_PROJECT_NAME);
 	}
 
 	/**
@@ -1028,7 +1165,12 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
         IJavaProject jp = JavaProjectHelper.createJavaProject(name, JavaProjectHelper.BIN_DIR);
         IPackageFragmentRoot src = JavaProjectHelper.addSourceContainer(jp, JavaProjectHelper.SRC_DIR);
         File root = JavaTestPlugin.getDefault().getFileInPlugin(new Path(contentpath));
-        JavaProjectHelper.importFilesFromDirectory(root, src.getPath(), null);
+        File srcInRoot = new File(root, src.getPath().lastSegment());
+        if (srcInRoot.isDirectory()) {
+            JavaProjectHelper.importFilesFromDirectory(srcInRoot, src.getPath(), null);
+        } else {
+            JavaProjectHelper.importFilesFromDirectory(root, src.getPath(), null);
+        }
 
         // add the EE library
         IVMInstall vm = JavaRuntime.getDefaultVMInstall();
@@ -2381,7 +2523,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 */
 	protected IEvaluationResult evaluate(String snippet, IJavaThread thread) throws Exception {
 		class Listener implements IEvaluationListener {
-			IEvaluationResult fResult;
+			volatile IEvaluationResult fResult;
 			@Override
 			public void evaluationComplete(IEvaluationResult result) {
 				fResult= result;
@@ -2393,9 +2535,9 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		ASTEvaluationEngine engine = new ASTEvaluationEngine(getProjectContext(), (IJavaDebugTarget) thread.getDebugTarget());
 		try {
 			engine.evaluate(snippet, frame, listener, DebugEvent.EVALUATION_IMPLICIT, false);
-			long timeout = System.currentTimeMillis()+DEFAULT_TIMEOUT;
-			while(listener.fResult == null && System.currentTimeMillis() < timeout) {
-				Thread.sleep(100);
+			long timeoutNanos = System.nanoTime() + DEFAULT_TIMEOUT * 1_000_000L;
+			while (listener.fResult == null && System.nanoTime() < timeoutNanos) {
+				Thread.sleep(1);
 			}
 			return listener.fResult;
 		}
@@ -2660,7 +2802,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 * @return true if the local filesystem is case-sensitive, false otherwise
 	 */
 	protected boolean isFileSystemCaseSensitive() {
-		return Platform.OS_MACOSX.equals(Platform.getOS()) ? false : new File("a").compareTo(new File("A")) != 0; //$NON-NLS-1$ //$NON-NLS-2$
+		return Platform.OS.isMac() ? false : new File("a").compareTo(new File("A")) != 0; //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
     /**
@@ -2789,7 +2931,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 
 	@Override
 	protected void tearDown() throws Exception {
-		TestUtil.log(IStatus.INFO, getName(), "tearDown");
+		TestUtil.logInfo("TDOWN " + getClass().getSimpleName() + "." + getName());
 		shutdownDebugTargets();
 		TestUtil.cleanUp(getName());
 		super.tearDown();
@@ -2856,7 +2998,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 */
 	protected IValue doEval(IJavaThread thread, StackFrameSupplier frameSupplier, String snippet) throws Exception {
 		class Listener implements IEvaluationListener {
-			IEvaluationResult fResult;
+			volatile IEvaluationResult fResult;
 
 			@Override
 			public void evaluationComplete(IEvaluationResult result) {
@@ -2873,9 +3015,9 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		ASTEvaluationEngine engine = new ASTEvaluationEngine(getProjectContext(), (IJavaDebugTarget) thread.getDebugTarget());
 		try {
 			engine.evaluate(snippet, frame, listener, DebugEvent.EVALUATION_IMPLICIT, false);
-			long timeout = System.currentTimeMillis() + 5000;
-			while(listener.getResult() == null && System.currentTimeMillis() < timeout) {
-				Thread.sleep(100);
+			long timeoutNanos = System.nanoTime() + 5000 * 1_000_000L;
+			while (listener.getResult() == null && System.nanoTime() < timeoutNanos) {
+				Thread.sleep(1);
 			}
 			IEvaluationResult result = listener.getResult();
 			assertNotNull("The evaluation should have result: ", result);

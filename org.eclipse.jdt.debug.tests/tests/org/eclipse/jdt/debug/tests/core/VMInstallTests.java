@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -148,7 +148,7 @@ public class VMInstallTests extends AbstractDebugTest {
 		VMInstallTestsLibraryLocationResolver.isTesting = true;
 		try {
 			String filename = "/testfiles/test-jre/bin/test-resolver.ee";
-			if(Platform.OS_WIN32.equals(Platform.getOS())) {
+			if (Platform.OS.isWindows()) {
 				filename = "/testfiles/test-jre/bin/test-resolver-win32.ee";
 			}
 			VMStandin vm = getEEStandin(filename);
@@ -195,7 +195,7 @@ public class VMInstallTests extends AbstractDebugTest {
 		VMInstallTestsLibraryLocationResolver.isTesting = true;
 		try {
 			String filename = "/testfiles/test-jre/bin/test-resolver2.ee";
-			if(Platform.OS_WIN32.equals(Platform.getOS())) {
+			if (Platform.OS.isWindows()) {
 				filename = "/testfiles/test-jre/bin/test-resolver-win32-2.ee";
 			}
 			VMStandin vm = getEEStandin(filename);
@@ -282,6 +282,17 @@ public class VMInstallTests extends AbstractDebugTest {
 			assertEquals(packages, JavaRuntime.getProvidedVMPackages(vm, "definitivly-not-a-version"));
 		} catch (org.junit.AssumptionViolatedException e) {
 			// Ignore this test. TODO: remove this once this is a JUnit-4 or later test that handles assumptions correctly
+		}
+	}
+
+	public void testLatestJavadocLocation() {
+		String latest = JavaCore.latestSupportedJavaVersion();
+		URL javadocLocation = StandardVMType.getDefaultJavadocLocation(latest);
+		assertNotNull(javadocLocation);
+		if (!javadocLocation.getPath().contains(latest)) {
+			System.err.println("****************************WARNING!!**********************************");
+			System.err.println("Update for Java " + latest + " needed in StandardVMType.getDefaultJavadocLocation()");
+			System.err.println("***********************************************************************");
 		}
 	}
 

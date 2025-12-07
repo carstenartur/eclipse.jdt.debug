@@ -1,5 +1,5 @@
 /*******************************************************************************
- *  Copyright (c) 2000, 2024 IBM Corporation and others.
+ *  Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  *  This program and the accompanying materials
  *  are made available under the terms of the Eclipse Public License 2.0
@@ -38,6 +38,7 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jdt.core.IClasspathAttribute;
 import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragmentRoot;
@@ -66,6 +67,8 @@ public class JavaProjectHelper {
 	public static final String JAVA_SE_16_EE_NAME = "JavaSE-16";
 	public static final String JAVA_SE_21_EE_NAME = "JavaSE-21";
 	public static final String JAVA_SE_23_EE_NAME = "JavaSE-23";
+	public static final String JAVA_SE_24_EE_NAME = "JavaSE-24";
+	public static final String JAVA_SE_25_EE_NAME = "JavaSE-25";
 
 	/**
 	 * path to the test src for 'testprograms'
@@ -100,6 +103,19 @@ public class JavaProjectHelper {
 	 * path to the 23 test source
 	 */
 	public static final IPath TEST_23_SRC_DIR = new Path("java23");
+	/**
+	 * path to the 24 test source
+	 */
+	public static final IPath TEST_24_SRC_DIR = new Path("java24");
+	/**
+	 * path to the 25 test source
+	 */
+	public static final IPath TEST_25_SRC_DIR = new Path("java25");
+
+	/**
+	 * path to the multirelease test source
+	 */
+	public static final IPath TEST_MR_SRC_DIR = new Path("multirelease");
 
 	/**
 	 * path to the compiler error java file
@@ -190,9 +206,28 @@ public class JavaProjectHelper {
 	}
 
 	/**
+	 * Returns if the currently running VM is version compatible with Java 24
+	 *
+	 * @return <code>true</code> if a Java 24 (or greater) VM is running <code>false</code> otherwise
+	 */
+	public static boolean isJava24_Compatible() {
+		return isCompatible(24);
+	}
+
+	/**
+	 * Returns if the currently running VM is version compatible with Java 25
+	 *
+	 * @return <code>true</code> if a Java 25 (or greater) VM is running <code>false</code> otherwise
+	 */
+	public static boolean isJava25_Compatible() {
+		return isCompatible(25);
+	}
+
+	/**
 	 * Returns if the current running system is compatible with the given Java minor version
 	 *
-	 * @param ver the version to test - either 4, 5, 6, 7 or 8
+	 * @param ver
+	 *            the version to test - within [ 8 ... JavaCore.latestSupportedJavaVersion() ]
 	 * @return <code>true</code> if compatible <code>false</code> otherwise
 	 */
 	static boolean isCompatible(int ver) {
@@ -294,9 +329,12 @@ public class JavaProjectHelper {
 
 	/**
 	 * Adds a new source container specified by the container name to the source path of the specified project
+	 *
+	 * @param extra
+	 *            optional extra classpath attributes
 	 * @return the package fragment root of the container name
 	 */
-	public static IPackageFragmentRoot addSourceContainer(IJavaProject jproject, String containerName) throws CoreException {
+	public static IPackageFragmentRoot addSourceContainer(IJavaProject jproject, String containerName, IClasspathAttribute... extra) throws CoreException {
 		IProject project= jproject.getProject();
 		IContainer container= null;
 		if (containerName == null || containerName.length() == 0) {
@@ -310,7 +348,7 @@ public class JavaProjectHelper {
 		}
 		IPackageFragmentRoot root= jproject.getPackageFragmentRoot(container);
 
-		IClasspathEntry cpe= JavaCore.newSourceEntry(root.getPath());
+		IClasspathEntry cpe = JavaCore.newSourceEntry(root.getPath(), ClasspathEntry.INCLUDE_ALL, ClasspathEntry.EXCLUDE_NONE, null, extra);
 		addToClasspath(jproject, cpe);
 		return root;
 	}
@@ -449,6 +487,9 @@ public class JavaProjectHelper {
 		}
 		else if(JAVA_SE_1_8_EE_NAME.equals(ee)) {
 			setCompliance(project, JavaCore.VERSION_1_8);
+		}
+		else if (JAVA_SE_9_EE_NAME.equals(ee)) {
+			setCompliance(project, JavaCore.VERSION_9);
 		}
 	}
 

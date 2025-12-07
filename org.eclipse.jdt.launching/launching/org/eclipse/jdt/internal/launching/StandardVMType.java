@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2025 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -87,7 +87,6 @@ public class StandardVMType extends AbstractVMInstallType {
 
 	/**
 	 * The minimal -Xmx size for launching a JVM. <br>
-	 * <b>Note:</b> Must be omitted for Standard11xVM! <br>
 	 * <b>Note:</b> Must be at least -Xmx16m for JRockit, see <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=433455">bug 433455</a>.
 	 *
 	 * @since 3.7.100
@@ -272,7 +271,7 @@ public class StandardVMType extends AbstractVMInstallType {
 	@Override
 	public File detectInstallLocation() {
 		// We want a Mac OSX VM install so don't process the install location for this type
-		if(Platform.OS_MACOSX.equals(Platform.getOS())) {
+		if (Platform.OS.isMac()) {
 			return null;
 		}
 		return getJavaHomeLocation();
@@ -677,7 +676,7 @@ public class StandardVMType extends AbstractVMInstallType {
 			Process p = null;
 			try {
 				String envp[] = null;
-				if (Platform.OS_MACOSX.equals(Platform.getOS())) {
+				if (Platform.OS.isMac()) {
 					Map<String, String> map = DebugPlugin.getDefault().getLaunchManager().getNativeEnvironmentCasePreserved();
 					if (map.remove(StandardVMDebugger.JAVA_JVM_VERSION) != null) {
 						envp = new String[map.size()];
@@ -809,8 +808,14 @@ public class StandardVMType extends AbstractVMInstallType {
 	 */
 	public static URL getDefaultJavadocLocation(String version) {
 		try {
-			if (version.startsWith(JavaCore.VERSION_23)) {
-				// To modify to version 23 after the release
+			if (version.startsWith(JavaCore.VERSION_26)) {
+				// Java 26 docs aren't published yet
+				return new URI("https://docs.oracle.com/en/java/javase/25/docs/api/").toURL(); //$NON-NLS-1$
+			} else if (version.startsWith(JavaCore.VERSION_25)) {
+				return new URI("https://docs.oracle.com/en/java/javase/25/docs/api/").toURL(); //$NON-NLS-1$
+			} else if (version.startsWith(JavaCore.VERSION_24)) {
+				return new URI("https://docs.oracle.com/en/java/javase/24/docs/api/").toURL(); //$NON-NLS-1$
+			} else if (version.startsWith(JavaCore.VERSION_23)) {
 				return new URI("https://docs.oracle.com/en/java/javase/23/docs/api/").toURL(); //$NON-NLS-1$
 			} else if (version.startsWith(JavaCore.VERSION_22)) {
 				return new URI("https://docs.oracle.com/en/java/javase/22/docs/api/").toURL(); //$NON-NLS-1$
