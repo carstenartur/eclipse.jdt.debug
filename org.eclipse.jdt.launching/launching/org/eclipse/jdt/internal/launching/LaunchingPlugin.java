@@ -272,7 +272,9 @@ public class LaunchingPlugin extends Plugin implements DebugOptionsListener, IEc
 								}
 							}
 						}
-					} catch (CoreException e) {}
+					} catch (CoreException e) {
+						// ignore - unable to update launch configuration
+					}
 				}
 			}
 		}

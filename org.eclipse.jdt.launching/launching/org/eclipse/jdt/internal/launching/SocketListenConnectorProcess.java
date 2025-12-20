@@ -133,7 +133,9 @@ public class SocketListenConnectorProcess implements IProcess {
 				} else {
 					try{
 						terminate();
-					} catch (DebugException e){}
+					} catch (DebugException e){
+						// ignore - unable to terminate connection
+					}
 				}
 			}
 		});
