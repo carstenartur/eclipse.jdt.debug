@@ -2013,8 +2013,9 @@ public final class JavaRuntime {
 			if (file.exists()) {
 				// If file exists, load VM definitions from it into memory and write the definitions to
 				// the preference store WITHOUT triggering any processing of the new value
-				InputStream fileInputStream = new BufferedInputStream(new FileInputStream(file));
-				VMDefinitionsContainer.parseXMLIntoContainer(fileInputStream, vmDefs);
+				try (InputStream fileInputStream = new BufferedInputStream(new FileInputStream(file))) {
+					VMDefinitionsContainer.parseXMLIntoContainer(fileInputStream, vmDefs);
+				}
 			}
 		}
 		return true;

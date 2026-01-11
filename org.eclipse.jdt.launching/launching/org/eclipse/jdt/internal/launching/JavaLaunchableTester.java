@@ -181,8 +181,12 @@ public class JavaLaunchableTester extends PropertyTester {
 				}
             }
 		}
-		catch (JavaModelException e) {}
-		catch (CoreException ce){}
+		catch (JavaModelException e) {
+			// ignore - element may not be accessible
+		}
+		catch (CoreException ce){
+			// ignore - element may not be accessible
+		}
 		return false;
 	}
 
@@ -278,7 +282,9 @@ public class JavaLaunchableTester extends PropertyTester {
 				}
 			}
 		}
-		catch (JavaModelException e) {}
+		catch (JavaModelException e) {
+			// ignore - method may not exist
+		}
 		return false;
 	}
 
@@ -322,8 +328,12 @@ public class JavaLaunchableTester extends PropertyTester {
 				}
 			}
 		}
-		catch (JavaModelException e) {}
-		catch (InvalidInputException e) {}
+		catch (JavaModelException e) {
+			// ignore - type may not have annotation
+		}
+		catch (InvalidInputException e) {
+			// ignore - scanner may fail on invalid input
+		}
 		return false;
 	}
 
@@ -400,7 +410,9 @@ public class JavaLaunchableTester extends PropertyTester {
 				}
 			}
 		} catch (JavaModelException e) {
+			// ignore - method may not have annotation
 		} catch (InvalidInputException e) {
+			// ignore - scanner may fail on invalid input
 		}
 		return false;
 	}
@@ -456,7 +468,10 @@ public class JavaLaunchableTester extends PropertyTester {
     		}
 	    	return false;
         }
-    	catch (CoreException e) {return false;}
+    	catch (CoreException e) {
+			// ignore - element may not have the specified nature
+			return false;
+		}
     }
 
 	/**
@@ -477,7 +492,9 @@ public class JavaLaunchableTester extends PropertyTester {
 				}
 			}
 		}
-		catch(JavaModelException e) {}
+		catch(JavaModelException e) {
+			// ignore - type may not have superclass hierarchy
+		}
 		return false;
 	}
 
@@ -534,7 +551,9 @@ public class JavaLaunchableTester extends PropertyTester {
 	        		return true;
 	        	}
 	        }
-		} catch (JavaModelException e) {}
+		} catch (JavaModelException e) {
+			// ignore - classpath may not be accessible
+		}
 		return false;
 	}
 
@@ -556,7 +575,9 @@ public class JavaLaunchableTester extends PropertyTester {
 				}
 			}
 		}
-		catch(JavaModelException e) {}
+		catch(JavaModelException e) {
+			// ignore - type may not have interface hierarchy
+		}
 		return false;
 	}
 

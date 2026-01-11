@@ -46,7 +46,9 @@ public class JavaWatchExpressionFilter implements IWatchExpressionFactoryAdapter
 			if (variable.getValue() instanceof JDIPlaceholderValue){
 				return false;
 			}
-		} catch (DebugException e) {}
+		} catch (DebugException e) {
+			// ignore - unable to get variable value
+		}
 		return true;
 	}
 
