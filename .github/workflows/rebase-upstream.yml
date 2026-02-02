@@ -56,8 +56,8 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const authorAssociation = context.payload.comment.author_association;
-            const authorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(authorAssociation);
+            const author_association = context.payload.comment.author_association;
+            const authorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(author_association);
             
             if (!authorized) {
               await github.rest.issues.createComment({
@@ -70,7 +70,6 @@ jobs:
             }
             
             return authorized;
-          result-encoding: string
 
       - name: Add rocket reaction to acknowledge command
         if: steps.check-auth.outputs.result == 'true'
@@ -130,7 +129,7 @@ jobs:
         if: steps.check-auth.outputs.result == 'true'
         id: rebase
         run: |
-          # Disable exit on error to capture rebase exit code explicitly
+          # Disable automatic exit on error to manually handle rebase failures
           set +e
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
           git fetch upstream master
@@ -154,6 +153,7 @@ jobs:
         run: |
           # Note: GITHUB_TOKEN has write access to the fork if the PR author has enabled
           # "Allow edits by maintainers" (enabled by default for most PRs)
+          # Disable automatic exit on error to manually handle push failures
           set +e
           git push --force-with-lease origin ${{ steps.pr-info.outputs.head_ref }}
           PUSH_EXIT_CODE=$?
