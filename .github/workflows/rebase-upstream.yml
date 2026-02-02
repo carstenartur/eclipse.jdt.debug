@@ -114,6 +114,10 @@ jobs:
         if: steps.check-auth.outputs.result == 'true'
         uses: actions/checkout@v4
         with:
+          # Security note: This checks out untrusted code, but is protected by:
+          # 1. Authorization check (only OWNER/MEMBER/COLLABORATOR can trigger)
+          # 2. No code from the PR is executed - only git operations are performed
+          # 3. Similar security model to the existing rebase workflow in this repo
           repository: ${{ steps.pr-info.outputs.head_repo }}
           ref: ${{ steps.pr-info.outputs.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
