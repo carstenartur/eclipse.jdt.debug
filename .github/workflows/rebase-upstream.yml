@@ -96,8 +96,19 @@ jobs:
               pull_number: context.issue.number
             });
             
+            if (!pr.head.repo) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '❌ Cannot rebase: The source repository has been deleted. Please close and recreate this PR from an active fork.'
+              });
+              core.setFailed('Source repository has been deleted');
+              return;
+            }
+            
             core.setOutput('head_ref', pr.head.ref);
-            core.setOutput('head_repo', pr.head.repo?.full_name || context.repo.full_name);
+            core.setOutput('head_repo', pr.head.repo.full_name);
             core.setOutput('head_sha', pr.head.sha);
 
       - name: Checkout PR branch
@@ -139,11 +150,24 @@ jobs:
 
       - name: Force push with lease
         if: steps.check-auth.outputs.result == 'true' && steps.rebase.outputs.rebase_failed != 'true'
+        id: push
         run: |
+          # Note: GITHUB_TOKEN has write access to the fork if the PR author has enabled
+          # "Allow edits by maintainers" (enabled by default for most PRs)
+          set +e
           git push --force-with-lease origin ${{ steps.pr-info.outputs.head_ref }}
+          PUSH_EXIT_CODE=$?
+          
+          if [ $PUSH_EXIT_CODE -ne 0 ]; then
+            echo "push_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "push_failed=false" >> $GITHUB_OUTPUT
+          exit 0
 
       - name: Add success comment and reaction
-        if: steps.check-auth.outputs.result == 'true' && steps.rebase.outputs.rebase_failed != 'true'
+        if: steps.check-auth.outputs.result == 'true' && steps.rebase.outputs.rebase_failed != 'true' && steps.push.outputs.push_failed != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -161,7 +185,7 @@ jobs:
               body: '✅ Successfully rebased onto `eclipse-jdt/eclipse.jdt.debug:master`'
             });
 
-      - name: Add failure comment and reaction
+      - name: Add rebase failure comment and reaction
         if: steps.check-auth.outputs.result == 'true' && failure() && steps.rebase.outputs.rebase_failed == 'true'
         uses: actions/github-script@v7
         with:
@@ -182,6 +206,44 @@ jobs:
             git rebase upstream/master
             # Resolve conflicts
             git rebase --continue
+            git push --force-with-lease
+            \`\`\``;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Add push failure comment and reaction
+        if: steps.check-auth.outputs.result == 'true' && failure() && steps.push.outputs.push_failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1'
+            });
+            
+            const comment = `❌ Rebase succeeded but push failed due to insufficient permissions.
+            
+            **Possible causes:**
+            - The PR author has not enabled "Allow edits by maintainers"
+            - The fork repository has restricted push access
+            
+            **To enable automatic rebase:**
+            1. Go to the PR page
+            2. Check "Allow edits by maintainers" in the sidebar
+            3. Try the \`/rebase-upstream\` command again
+            
+            **Or rebase manually:**
+            \`\`\`bash
+            git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
+            git fetch upstream master
+            git rebase upstream/master
             git push --force-with-lease
             \`\`\``;
             
