@@ -56,13 +56,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const { data: comment } = await github.rest.issues.getComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id
-            });
-            
-            const authorAssociation = comment.user.author_association;
+            const authorAssociation = context.payload.comment.author_association;
             const authorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(authorAssociation);
             
             if (!authorized) {
@@ -70,7 +64,7 @@ jobs:
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `@${comment.user.login} ❌ Only repository owners, members, and collaborators can trigger the rebase.`
+                body: `@${context.payload.comment.user.login} ❌ Only repository owners, members, and collaborators can trigger the rebase.`
               });
               core.setFailed('User not authorized to trigger rebase');
             }
@@ -103,7 +97,7 @@ jobs:
             });
             
             core.setOutput('head_ref', pr.head.ref);
-            core.setOutput('head_repo', pr.head.repo.full_name);
+            core.setOutput('head_repo', pr.head.repo?.full_name || context.repo.full_name);
             core.setOutput('head_sha', pr.head.sha);
 
       - name: Checkout PR branch
@@ -125,6 +119,7 @@ jobs:
         if: steps.check-auth.outputs.result == 'true'
         id: rebase
         run: |
+          # Disable exit on error to capture rebase exit code explicitly
           set +e
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
           git fetch upstream master
