@@ -1,0 +1,198 @@
+name: Rebase on Upstream Master
+
+on:
+  pull_request:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  add-rebase-button:
+    name: Add Rebase Instructions
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add comment with rebase instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `### 🔄 Rebase on Upstream Master
+            
+            To rebase this PR branch onto the latest \`eclipse-jdt/eclipse.jdt.debug:master\`, comment:
+            
+            \`\`\`
+            /rebase-upstream
+            \`\`\`
+            
+            This will:
+            1. Fetch the latest changes from \`eclipse-jdt/eclipse.jdt.debug:master\`
+            2. Rebase your branch onto it
+            3. Force push the rebased branch
+            
+            [View workflow runs](${context.payload.repository.html_url}/actions/workflows/rebase-upstream.yml)`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  rebase-upstream:
+    name: Rebase on Upstream Master
+    if: |
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '/rebase-upstream')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check if user is authorized
+        id: check-auth
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comment } = await github.rest.issues.getComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id
+            });
+            
+            const authorAssociation = comment.user.author_association;
+            const authorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(authorAssociation);
+            
+            if (!authorized) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `@${comment.user.login} ❌ Only repository owners, members, and collaborators can trigger the rebase.`
+              });
+              core.setFailed('User not authorized to trigger rebase');
+            }
+            
+            return authorized;
+          result-encoding: string
+
+      - name: Add rocket reaction to acknowledge command
+        if: steps.check-auth.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Get PR branch information
+        if: steps.check-auth.outputs.result == 'true'
+        id: pr-info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
+            core.setOutput('head_ref', pr.head.ref);
+            core.setOutput('head_repo', pr.head.repo.full_name);
+            core.setOutput('head_sha', pr.head.sha);
+
+      - name: Checkout PR branch
+        if: steps.check-auth.outputs.result == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.pr-info.outputs.head_repo }}
+          ref: ${{ steps.pr-info.outputs.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        if: steps.check-auth.outputs.result == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote and rebase
+        if: steps.check-auth.outputs.result == 'true'
+        id: rebase
+        run: |
+          set +e
+          git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
+          git fetch upstream master
+          
+          echo "Rebasing onto upstream/master..."
+          git rebase upstream/master
+          REBASE_EXIT_CODE=$?
+          
+          if [ $REBASE_EXIT_CODE -ne 0 ]; then
+            echo "rebase_failed=true" >> $GITHUB_OUTPUT
+            git rebase --abort || true
+            exit 1
+          fi
+          
+          echo "rebase_failed=false" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Force push with lease
+        if: steps.check-auth.outputs.result == 'true' && steps.rebase.outputs.rebase_failed != 'true'
+        run: |
+          git push --force-with-lease origin ${{ steps.pr-info.outputs.head_ref }}
+
+      - name: Add success comment and reaction
+        if: steps.check-auth.outputs.result == 'true' && steps.rebase.outputs.rebase_failed != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Successfully rebased onto `eclipse-jdt/eclipse.jdt.debug:master`'
+            });
+
+      - name: Add failure comment and reaction
+        if: steps.check-auth.outputs.result == 'true' && failure() && steps.rebase.outputs.rebase_failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1'
+            });
+            
+            const comment = `❌ Rebase failed due to conflicts.
+            
+            To rebase manually:
+            \`\`\`bash
+            git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
+            git fetch upstream master
+            git rebase upstream/master
+            # Resolve conflicts
+            git rebase --continue
+            git push --force-with-lease
+            \`\`\``;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
