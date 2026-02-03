@@ -224,7 +224,8 @@ jobs:
             FORK_POINT=$(git merge-base HEAD origin/master)
             
             # Rebase only your PR commits onto upstream/master (excluding fork commits)
-            git rebase --onto upstream/master $FORK_POINT
+            # The third argument (HEAD) specifies to rebase everything from FORK_POINT to HEAD
+            git rebase --onto upstream/master $FORK_POINT HEAD
             
             # Resolve conflicts if any
             git rebase --continue
@@ -272,7 +273,8 @@ jobs:
             FORK_POINT=$(git merge-base HEAD origin/master)
             
             # Rebase only your PR commits onto upstream/master (excluding fork commits)
-            git rebase --onto upstream/master $FORK_POINT
+            # The third argument (HEAD) specifies to rebase everything from FORK_POINT to HEAD
+            git rebase --onto upstream/master $FORK_POINT HEAD
             
             git push --force-with-lease
             \`\`\``;

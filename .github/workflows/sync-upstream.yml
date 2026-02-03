@@ -181,10 +181,13 @@ jobs:
               'git fetch upstream master\n' +
               'git fetch origin master\n' +
               '\n' +
+              '# Identify fork-specific files (typically in .github/workflows/)\n' +
+              'git diff --name-only origin/master upstream/master | grep ".github/workflows/"\n' +
+              '\n' +
               '# Create a branch from upstream\n' +
               'git checkout -b new-master upstream/master\n' +
               '\n' +
-              '# Apply fork-specific files\n' +
+              '# Apply fork-specific files (adjust path as needed)\n' +
               'git checkout origin/master -- .github/workflows/\n' +
               '\n' +
               '# Commit changes\n' +
