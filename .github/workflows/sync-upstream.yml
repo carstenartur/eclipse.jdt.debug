@@ -116,7 +116,7 @@ jobs:
     steps:
       - name: Check if user is authorized
         id: check-auth
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const author_association = context.payload.comment.author_association;
@@ -136,7 +136,7 @@ jobs:
 
       - name: Add rocket reaction to acknowledge command
         if: steps.check-auth.outputs.result == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.reactions.createForIssueComment({
@@ -225,7 +225,7 @@ jobs:
 
       - name: Add success comment
         if: steps.check-auth.outputs.result == 'true' && steps.sync.outputs.sync_needed == 'true' && success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.reactions.createForIssueComment({
@@ -247,7 +247,7 @@ jobs:
 
       - name: Add no-sync-needed comment
         if: steps.check-auth.outputs.result == 'true' && steps.sync.outputs.sync_needed == 'false' && success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const body = 'ℹ️ Fork is already in sync with `eclipse-jdt/eclipse.jdt.debug:master`\n\n' +
@@ -262,7 +262,7 @@ jobs:
 
       - name: Add failure comment
         if: steps.check-auth.outputs.result == 'true' && failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.reactions.createForIssueComment({
