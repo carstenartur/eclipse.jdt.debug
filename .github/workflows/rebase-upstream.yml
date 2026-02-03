@@ -20,7 +20,7 @@ jobs:
           script: |
             const comment = `### 🔄 Rebase on Upstream Master
             
-            To rebase this PR branch onto the latest \`eclipse-jdt/eclipse.jdt.debug:master\`, comment:
+            To rebase this PR branch onto the latest \`eclipse-jdt/eclipse.jdt.debug:master\` (excluding fork-specific commits), comment:
             
             \`\`\`
             /rebase-upstream
@@ -28,7 +28,7 @@ jobs:
             
             This will:
             1. Fetch the latest changes from \`eclipse-jdt/eclipse.jdt.debug:master\`
-            2. Rebase your branch onto it
+            2. Rebase **only your PR commits** onto upstream master (skipping fork-specific commits)
             3. Force push the rebased branch
             
             [View workflow runs](${context.payload.repository.html_url}/actions/workflows/rebase-upstream.yml)`;
@@ -137,9 +137,20 @@ jobs:
           set +e
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
           git fetch upstream master
+          git fetch origin master
           
-          echo "Rebasing onto upstream/master..."
-          git rebase upstream/master
+          # Find the merge-base between current branch and origin/master
+          FORK_POINT=$(git merge-base HEAD origin/master)
+          echo "Fork point: $FORK_POINT"
+          
+          # Get current branch name
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Current branch: $CURRENT_BRANCH"
+          
+          echo "Rebasing only PR commits onto upstream/master..."
+          # Use --onto to rebase only commits after the fork point
+          # This excludes fork-specific commits that are in origin/master
+          git rebase --onto upstream/master "$FORK_POINT" "$CURRENT_BRANCH"
           REBASE_EXIT_CODE=$?
           
           if [ $REBASE_EXIT_CODE -ne 0 ]; then
@@ -207,9 +218,17 @@ jobs:
             \`\`\`bash
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
-            git rebase upstream/master
+            git fetch origin master
+            
+            # Find the fork point (where your branch diverged from origin/master)
+            FORK_POINT=$(git merge-base HEAD origin/master)
+            
+            # Rebase only your PR commits onto upstream/master
+            git rebase --onto upstream/master $FORK_POINT HEAD
+            
             # Resolve conflicts
             git rebase --continue
+            
             git push --force-with-lease
             \`\`\``;
             
@@ -247,7 +266,14 @@ jobs:
             \`\`\`bash
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
-            git rebase upstream/master
+            git fetch origin master
+            
+            # Find the fork point (where your branch diverged from origin/master)
+            FORK_POINT=$(git merge-base HEAD origin/master)
+            
+            # Rebase only your PR commits onto upstream/master
+            git rebase --onto upstream/master $FORK_POINT HEAD
+            
             git push --force-with-lease
             \`\`\``;
             

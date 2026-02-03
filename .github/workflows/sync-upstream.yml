@@ -1,0 +1,207 @@
+name: Sync Fork with Upstream Master
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  sync-upstream:
+    name: Sync Fork with Upstream
+    if: |
+      (github.event.issue.pull_request != null || github.event_name == 'issue_comment') &&
+      contains(github.event.comment.body, '/sync-upstream')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check if user is authorized
+        id: check-auth
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const author_association = context.payload.comment.author_association;
+            const authorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(author_association);
+            
+            if (!authorized) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `@${context.payload.comment.user.login} ❌ Only repository owners, members, and collaborators can trigger the sync.`
+              });
+              core.setFailed('User not authorized to trigger sync');
+            }
+            
+            return authorized;
+
+      - name: Add rocket reaction to acknowledge command
+        if: steps.check-auth.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Checkout master branch
+        if: steps.check-auth.outputs.result == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        if: steps.check-auth.outputs.result == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync with upstream and squash fork-specific commits
+        if: steps.check-auth.outputs.result == 'true'
+        id: sync
+        run: |
+          set -e
+          
+          echo "Adding upstream remote..."
+          git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git || true
+          
+          echo "Fetching from upstream and origin..."
+          git fetch upstream master
+          git fetch origin master
+          
+          echo "Identifying fork-specific files..."
+          # Get list of files that exist in origin/master but not in upstream/master
+          # Focus on .github/workflows and other fork-specific paths
+          git checkout origin/master
+          FORK_FILES=$(git diff --name-only upstream/master origin/master | grep -E '^\.github/workflows/' || true)
+          
+          if [ -z "$FORK_FILES" ]; then
+            echo "No fork-specific files found. Nothing to sync."
+            echo "sync_needed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Fork-specific files found:"
+          echo "$FORK_FILES"
+          echo "sync_needed=true" >> $GITHUB_OUTPUT
+          
+          # Create a temporary branch from upstream/master
+          echo "Creating new-master branch from upstream/master..."
+          git checkout -b new-master upstream/master
+          
+          # Apply fork-specific changes
+          echo "Applying fork-specific changes..."
+          # Checkout the fork-specific files from origin/master
+          for file in $FORK_FILES; do
+            if git cat-file -e origin/master:"$file" 2>/dev/null; then
+              mkdir -p "$(dirname "$file")"
+              git show origin/master:"$file" > "$file"
+              git add "$file"
+            fi
+          done
+          
+          # Create a single squashed commit for all fork-specific changes
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "sync_needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Creating squashed commit for fork-specific changes..."
+            git commit -m "Fork-specific CI and workflow configurations" \
+              -m "This commit contains all fork-specific customizations including:" \
+              -m "- GitHub Actions workflows" \
+              -m "- CI configuration files" \
+              -m "- Other fork-specific settings" \
+              -m "" \
+              -m "These changes are maintained as a single commit to keep the fork" \
+              -m "in sync with upstream while preserving fork customizations."
+            
+            echo "Force pushing to origin/master..."
+            git push origin new-master:master --force
+            
+            echo "✅ Successfully synced fork with upstream"
+          fi
+
+      - name: Add success comment
+        if: steps.check-auth.outputs.result == 'true' && steps.sync.outputs.sync_needed == 'true' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });
+            
+            const body = '✅ Successfully synced fork with `eclipse-jdt/eclipse.jdt.debug:master`\n\n' +
+              'The fork\'s master branch has been updated to match upstream, with all fork-specific changes squashed into a single commit.';
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Add no-sync-needed comment
+        if: steps.check-auth.outputs.result == 'true' && steps.sync.outputs.sync_needed == 'false' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = 'ℹ️ Fork is already in sync with `eclipse-jdt/eclipse.jdt.debug:master`\n\n' +
+              'No sync was needed.';
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Add failure comment
+        if: steps.check-auth.outputs.result == 'true' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1'
+            });
+            
+            const body = '❌ Sync with upstream failed.\n\n' +
+              '**To sync manually:**\n' +
+              '```bash\n' +
+              'git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git\n' +
+              'git fetch upstream master\n' +
+              'git fetch origin master\n' +
+              '\n' +
+              '# Create a branch from upstream\n' +
+              'git checkout -b new-master upstream/master\n' +
+              '\n' +
+              '# Apply fork-specific files\n' +
+              'git checkout origin/master -- .github/workflows/\n' +
+              '\n' +
+              '# Commit changes\n' +
+              'git add .\n' +
+              'git commit -m "Fork-specific CI and workflow configurations"\n' +
+              '\n' +
+              '# Force push to master\n' +
+              'git push origin new-master:master --force\n' +
+              '```\n' +
+              '\n' +
+              '[View workflow logs](' + context.payload.repository.html_url + '/actions/runs/' + context.runId + ')';
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
