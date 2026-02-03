@@ -137,9 +137,12 @@ jobs:
           set +e
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
           git fetch upstream master
+          git fetch origin master
           
           echo "Rebasing onto upstream/master..."
-          git rebase upstream/master
+          # Use --onto to skip fork-specific commits on master
+          # This rebases the PR branch onto upstream/master, excluding commits between origin/master and the branch
+          git rebase --onto upstream/master origin/master
           REBASE_EXIT_CODE=$?
           
           if [ $REBASE_EXIT_CODE -ne 0 ]; then
@@ -207,7 +210,8 @@ jobs:
             \`\`\`bash
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
-            git rebase upstream/master
+            git fetch origin master
+            git rebase --onto upstream/master origin/master
             # Resolve conflicts
             git rebase --continue
             git push --force-with-lease
@@ -247,7 +251,8 @@ jobs:
             \`\`\`bash
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
-            git rebase upstream/master
+            git fetch origin master
+            git rebase --onto upstream/master origin/master
             git push --force-with-lease
             \`\`\``;
             

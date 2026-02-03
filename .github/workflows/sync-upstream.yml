@@ -1,0 +1,345 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3:00 AM UTC
+  workflow_dispatch:  # Manual trigger from Actions tab
+  issue_comment:
+    types: [created]
+
+jobs:
+  sync-scheduled:
+    name: Scheduled Sync
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
+          git fetch upstream master
+
+      - name: Check for upstream changes
+        id: check-changes
+        run: |
+          # Get current master commit
+          CURRENT_SHA=$(git rev-parse HEAD)
+          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          
+          if [ "$CURRENT_SHA" = "$UPSTREAM_SHA" ]; then
+            echo "No upstream changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Upstream changes detected"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Identify fork-specific files
+        if: steps.check-changes.outputs.has_changes == 'true'
+        id: fork-files
+        run: |
+          # Create a temporary directory for fork-specific files
+          mkdir -p /tmp/fork-files
+          
+          # Identify fork-specific files (files that exist in fork but not in upstream)
+          # Primarily .github/workflows/ files
+          echo "Identifying fork-specific files..."
+          
+          # Check .github/workflows directory
+          if [ -d .github/workflows ]; then
+            for file in .github/workflows/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                # Check if file exists in upstream
+                if ! git ls-tree upstream/master --name-only -r | grep -q "^.github/workflows/$filename$"; then
+                  echo "Fork-specific file: $file"
+                  mkdir -p "/tmp/fork-files/$(dirname "$file")"
+                  cp "$file" "/tmp/fork-files/$file"
+                fi
+              fi
+            done
+          fi
+          
+          # List all fork-specific files found
+          echo "Fork-specific files saved:"
+          find /tmp/fork-files -type f || echo "No fork-specific files found"
+
+      - name: Reset to upstream master
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          echo "Resetting to upstream/master..."
+          git reset --hard upstream/master
+
+      - name: Re-apply fork-specific changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          # Restore fork-specific files
+          if [ -d /tmp/fork-files ]; then
+            echo "Re-applying fork-specific files..."
+            cp -r /tmp/fork-files/.github .github/ 2>/dev/null || echo "No .github files to restore"
+            
+            # Stage all changes
+            git add -A
+            
+            # Check if there are changes to commit
+            if git diff --cached --quiet; then
+              echo "No fork-specific changes to commit"
+            else
+              # Commit all fork-specific changes as a single squashed commit
+              git commit -m "chore: re-apply fork-specific changes" \
+                         -m "Fork-specific workflows and configurations maintained from previous sync." \
+                         -m "Auto-sync performed by GitHub Actions."
+            fi
+          fi
+
+      - name: Force push to master
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          echo "Force pushing to origin/master..."
+          git push --force origin master
+
+  sync-manual:
+    name: Manual Sync via Comment
+    if: |
+      github.event_name == 'issue_comment' &&
+      contains(github.event.comment.body, '/sync-upstream')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check if user is authorized
+        id: check-auth
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const author_association = context.payload.comment.author_association;
+            const authorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(author_association);
+            
+            if (!authorized) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `@${context.payload.comment.user.login} ❌ Only repository owners, members, and collaborators can trigger the sync.`
+              });
+              core.setFailed('User not authorized to trigger sync');
+            }
+            
+            return authorized;
+
+      - name: Add rocket reaction to acknowledge command
+        if: steps.check-auth.outputs.result == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Checkout repository
+        if: steps.check-auth.outputs.result == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        if: steps.check-auth.outputs.result == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        if: steps.check-auth.outputs.result == 'true'
+        run: |
+          git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
+          git fetch upstream master
+
+      - name: Check for upstream changes
+        if: steps.check-auth.outputs.result == 'true'
+        id: check-changes
+        run: |
+          # Get current master commit
+          CURRENT_SHA=$(git rev-parse HEAD)
+          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          
+          if [ "$CURRENT_SHA" = "$UPSTREAM_SHA" ]; then
+            echo "No upstream changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Upstream changes detected"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add no-changes comment
+        if: steps.check-auth.outputs.result == 'true' && steps.check-changes.outputs.has_changes == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Fork is already up to date with `eclipse-jdt/eclipse.jdt.debug:master`'
+            });
+
+      - name: Identify fork-specific files
+        if: steps.check-auth.outputs.result == 'true' && steps.check-changes.outputs.has_changes == 'true'
+        id: fork-files
+        run: |
+          # Create a temporary directory for fork-specific files
+          mkdir -p /tmp/fork-files
+          
+          # Identify fork-specific files (files that exist in fork but not in upstream)
+          # Primarily .github/workflows/ files
+          echo "Identifying fork-specific files..."
+          
+          # Check .github/workflows directory
+          if [ -d .github/workflows ]; then
+            for file in .github/workflows/*; do
+              if [ -f "$file" ]; then
+                filename=$(basename "$file")
+                # Check if file exists in upstream
+                if ! git ls-tree upstream/master --name-only -r | grep -q "^.github/workflows/$filename$"; then
+                  echo "Fork-specific file: $file"
+                  mkdir -p "/tmp/fork-files/$(dirname "$file")"
+                  cp "$file" "/tmp/fork-files/$file"
+                fi
+              fi
+            done
+          fi
+          
+          # List all fork-specific files found
+          echo "Fork-specific files saved:"
+          find /tmp/fork-files -type f || echo "No fork-specific files found"
+
+      - name: Reset to upstream master
+        if: steps.check-auth.outputs.result == 'true' && steps.check-changes.outputs.has_changes == 'true'
+        id: sync
+        run: |
+          set +e
+          echo "Resetting to upstream/master..."
+          git reset --hard upstream/master
+          
+          if [ $? -ne 0 ]; then
+            echo "sync_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "sync_failed=false" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Re-apply fork-specific changes
+        if: steps.check-auth.outputs.result == 'true' && steps.check-changes.outputs.has_changes == 'true' && steps.sync.outputs.sync_failed != 'true'
+        run: |
+          # Restore fork-specific files
+          if [ -d /tmp/fork-files ]; then
+            echo "Re-applying fork-specific files..."
+            cp -r /tmp/fork-files/.github .github/ 2>/dev/null || echo "No .github files to restore"
+            
+            # Stage all changes
+            git add -A
+            
+            # Check if there are changes to commit
+            if git diff --cached --quiet; then
+              echo "No fork-specific changes to commit"
+            else
+              # Commit all fork-specific changes as a single squashed commit
+              git commit -m "chore: re-apply fork-specific changes" \
+                         -m "Fork-specific workflows and configurations maintained from previous sync." \
+                         -m "Auto-sync performed by GitHub Actions."
+            fi
+          fi
+
+      - name: Force push to master
+        if: steps.check-auth.outputs.result == 'true' && steps.check-changes.outputs.has_changes == 'true' && steps.sync.outputs.sync_failed != 'true'
+        id: push
+        run: |
+          set +e
+          echo "Force pushing to origin/master..."
+          git push --force origin master
+          
+          if [ $? -ne 0 ]; then
+            echo "push_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "push_failed=false" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Add success comment and reaction
+        if: steps.check-auth.outputs.result == 'true' && steps.check-changes.outputs.has_changes == 'true' && steps.sync.outputs.sync_failed != 'true' && steps.push.outputs.push_failed != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Successfully synced with `eclipse-jdt/eclipse.jdt.debug:master` and re-applied fork-specific changes'
+            });
+
+      - name: Add failure comment and reaction
+        if: steps.check-auth.outputs.result == 'true' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1'
+            });
+            
+            const comment = `❌ Sync failed.
+            
+            Please check the [workflow run logs](${context.payload.repository.html_url}/actions/workflows/sync-upstream.yml) for details.
+            
+            You may need to manually sync:
+            \`\`\`bash
+            git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
+            git fetch upstream master
+            git reset --hard upstream/master
+            # Re-apply fork-specific changes
+            git push --force origin master
+            \`\`\``;
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
