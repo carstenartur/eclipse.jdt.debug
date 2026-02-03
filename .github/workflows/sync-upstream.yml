@@ -1,13 +1,111 @@
 name: Sync Fork with Upstream Master
 
 on:
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3:00 AM UTC
+  workflow_dispatch:
   issue_comment:
     types: [created]
 
 jobs:
-  sync-upstream:
-    name: Sync Fork with Upstream
+  sync-scheduled:
+    name: Sync Fork with Upstream (Scheduled)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout master branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync with upstream and squash fork-specific commits
+        id: sync
+        run: |
+          set -e
+          
+          echo "Adding upstream remote..."
+          git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git || true
+          
+          echo "Fetching from upstream and origin..."
+          git fetch upstream master
+          git fetch origin master
+          
+          # Check if there are new commits in upstream
+          echo "Checking for new commits in upstream..."
+          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          CURRENT_SHA=$(git rev-parse origin/master)
+          
+          # Get the base commit (where fork diverged from upstream)
+          BASE_SHA=$(git merge-base origin/master upstream/master 2>/dev/null || echo "")
+          
+          if [ "$UPSTREAM_SHA" = "$BASE_SHA" ]; then
+            echo "No new commits in upstream. Skipping sync."
+            echo "sync_needed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "New commits found in upstream."
+          echo "sync_needed=true" >> $GITHUB_OUTPUT
+          
+          echo "Identifying fork-specific files..."
+          # Get list of files that exist in origin/master but not in upstream/master
+          # Focus on .github/workflows and other fork-specific paths
+          git checkout origin/master
+          FORK_FILES=$(git diff --name-only origin/master upstream/master | grep -E '^\.github/workflows/' || true)
+          
+          if [ -z "$FORK_FILES" ]; then
+            echo "No fork-specific files found."
+          else
+            echo "Fork-specific files found:"
+            echo "$FORK_FILES"
+          fi
+          
+          # Create a temporary branch from upstream/master
+          echo "Creating new-master branch from upstream/master..."
+          git checkout -b new-master upstream/master
+          
+          # Apply fork-specific changes if any
+          if [ -n "$FORK_FILES" ]; then
+            echo "Applying fork-specific changes..."
+            # Checkout the fork-specific files from origin/master
+            for file in $FORK_FILES; do
+              mkdir -p "$(dirname "$file")"
+              git show origin/master:"$file" > "$file"
+              git add "$file"
+            done
+            
+            # Create a single squashed commit for all fork-specific changes
+            if ! git diff --cached --quiet; then
+              echo "Creating squashed commit for fork-specific changes..."
+              git commit -m "chore: fork-specific CI and workflow configurations" \
+                -m "This commit contains all fork-specific customizations including:" \
+                -m "- GitHub Actions workflows" \
+                -m "- CI configuration files" \
+                -m "- Other fork-specific settings" \
+                -m "" \
+                -m "These changes are maintained as a single commit to keep the fork" \
+                -m "in sync with upstream while preserving fork customizations."
+            fi
+          fi
+          
+          echo "Force pushing to origin/master..."
+          git push origin new-master:master --force
+          
+          echo "✅ Successfully synced fork with upstream"
+
+  sync-manual:
+    name: Sync Fork with Upstream (Manual)
     if: |
+      github.event_name == 'issue_comment' &&
       (github.event.issue.pull_request != null || github.event_name == 'issue_comment') &&
       contains(github.event.comment.body, '/sync-upstream')
     runs-on: ubuntu-latest
@@ -110,7 +208,7 @@ jobs:
             echo "sync_needed=false" >> $GITHUB_OUTPUT
           else
             echo "Creating squashed commit for fork-specific changes..."
-            git commit -m "Fork-specific CI and workflow configurations" \
+            git commit -m "chore: fork-specific CI and workflow configurations" \
               -m "This commit contains all fork-specific customizations including:" \
               -m "- GitHub Actions workflows" \
               -m "- CI configuration files" \
