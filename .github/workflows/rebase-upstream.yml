@@ -107,12 +107,18 @@ jobs:
             }
             
             // Get the number of commits in the PR
+            // Note: per_page: 250 should be sufficient for most PRs
+            // PRs with more than 250 commits will need manual rebasing
             const { data: commits } = await github.rest.pulls.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
               per_page: 250
             });
+            
+            if (commits.length === 250) {
+              core.warning('PR has 250 or more commits. The rebase may not work correctly for very large PRs.');
+            }
             
             core.setOutput('head_ref', pr.head.ref);
             core.setOutput('head_repo', pr.head.repo.full_name);
@@ -227,9 +233,10 @@ jobs:
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
             
-            # Determine the number of commits in your PR (e.g., 3)
-            # You can find this on the PR page or by counting your commits
-            PR_COMMIT_COUNT=<number_of_commits_in_your_pr>
+            # Determine the number of commits in your PR
+            # You can find this on the PR page under "Commits" tab
+            # Example: if your PR has 3 commits, set PR_COMMIT_COUNT=3
+            PR_COMMIT_COUNT=3
             
             # Rebase only your PR commits onto upstream/master
             git rebase --onto upstream/master HEAD~\${PR_COMMIT_COUNT}
@@ -275,9 +282,10 @@ jobs:
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
             
-            # Determine the number of commits in your PR (e.g., 3)
-            # You can find this on the PR page or by counting your commits
-            PR_COMMIT_COUNT=<number_of_commits_in_your_pr>
+            # Determine the number of commits in your PR
+            # You can find this on the PR page under "Commits" tab
+            # Example: if your PR has 3 commits, set PR_COMMIT_COUNT=3
+            PR_COMMIT_COUNT=3
             
             # Rebase only your PR commits onto upstream/master
             git rebase --onto upstream/master HEAD~\${PR_COMMIT_COUNT}
