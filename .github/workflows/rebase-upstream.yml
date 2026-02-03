@@ -223,10 +223,10 @@ jobs:
             # Find the fork point (where your branch diverged from origin/master)
             FORK_POINT=$(git merge-base HEAD origin/master)
             
-            # Rebase only your PR commits onto upstream/master
-            git rebase --onto upstream/master $FORK_POINT HEAD
+            # Rebase only your PR commits onto upstream/master (excluding fork commits)
+            git rebase --onto upstream/master $FORK_POINT
             
-            # Resolve conflicts
+            # Resolve conflicts if any
             git rebase --continue
             
             git push --force-with-lease
@@ -271,8 +271,8 @@ jobs:
             # Find the fork point (where your branch diverged from origin/master)
             FORK_POINT=$(git merge-base HEAD origin/master)
             
-            # Rebase only your PR commits onto upstream/master
-            git rebase --onto upstream/master $FORK_POINT HEAD
+            # Rebase only your PR commits onto upstream/master (excluding fork commits)
+            git rebase --onto upstream/master $FORK_POINT
             
             git push --force-with-lease
             \`\`\``;

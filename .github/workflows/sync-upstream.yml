@@ -79,7 +79,7 @@ jobs:
           # Get list of files that exist in origin/master but not in upstream/master
           # Focus on .github/workflows and other fork-specific paths
           git checkout origin/master
-          FORK_FILES=$(git diff --name-only upstream/master origin/master | grep -E '^\.github/workflows/' || true)
+          FORK_FILES=$(git diff --name-only origin/master upstream/master | grep -E '^\.github/workflows/' || true)
           
           if [ -z "$FORK_FILES" ]; then
             echo "No fork-specific files found. Nothing to sync."
@@ -99,11 +99,9 @@ jobs:
           echo "Applying fork-specific changes..."
           # Checkout the fork-specific files from origin/master
           for file in $FORK_FILES; do
-            if git cat-file -e origin/master:"$file" 2>/dev/null; then
-              mkdir -p "$(dirname "$file")"
-              git show origin/master:"$file" > "$file"
-              git add "$file"
-            fi
+            mkdir -p "$(dirname "$file")"
+            git show origin/master:"$file" > "$file"
+            git add "$file"
           done
           
           # Create a single squashed commit for all fork-specific changes
