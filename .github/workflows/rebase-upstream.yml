@@ -106,9 +106,18 @@ jobs:
               return;
             }
             
+            // Get the number of commits in the PR
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 250
+            });
+            
             core.setOutput('head_ref', pr.head.ref);
             core.setOutput('head_repo', pr.head.repo.full_name);
             core.setOutput('head_sha', pr.head.sha);
+            core.setOutput('commit_count', commits.length);
 
       - name: Checkout PR branch
         if: steps.check-auth.outputs.result == 'true'
@@ -137,20 +146,19 @@ jobs:
           set +e
           git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
           git fetch upstream master
-          git fetch origin master
           
-          # Find the merge-base between current branch and origin/master
-          FORK_POINT=$(git merge-base HEAD origin/master)
-          echo "Fork point: $FORK_POINT"
+          # Get the number of commits in this PR from GitHub API
+          PR_COMMIT_COUNT=${{ steps.pr-info.outputs.commit_count }}
+          echo "PR has $PR_COMMIT_COUNT commits"
           
           # Get current branch name
           CURRENT_BRANCH=$(git branch --show-current)
           echo "Current branch: $CURRENT_BRANCH"
           
-          echo "Rebasing only PR commits onto upstream/master..."
-          # Use --onto to rebase only commits after the fork point
-          # This excludes fork-specific commits that are in origin/master
-          git rebase --onto upstream/master "$FORK_POINT" "$CURRENT_BRANCH"
+          echo "Rebasing only the $PR_COMMIT_COUNT PR commits onto upstream/master..."
+          # Rebase only the last N commits (the actual PR commits) onto upstream/master
+          # This excludes all fork-specific commits that came before the PR branch was created
+          git rebase --onto upstream/master HEAD~${PR_COMMIT_COUNT}
           REBASE_EXIT_CODE=$?
           
           if [ $REBASE_EXIT_CODE -ne 0 ]; then
@@ -218,14 +226,13 @@ jobs:
             \`\`\`bash
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
-            git fetch origin master
             
-            # Find the fork point (where your branch diverged from origin/master)
-            FORK_POINT=$(git merge-base HEAD origin/master)
+            # Determine the number of commits in your PR (e.g., 3)
+            # You can find this on the PR page or by counting your commits
+            PR_COMMIT_COUNT=<number_of_commits_in_your_pr>
             
-            # Rebase only your PR commits onto upstream/master (excluding fork commits)
-            # The third argument (HEAD) specifies to rebase everything from FORK_POINT to HEAD
-            git rebase --onto upstream/master $FORK_POINT HEAD
+            # Rebase only your PR commits onto upstream/master
+            git rebase --onto upstream/master HEAD~\${PR_COMMIT_COUNT}
             
             # Resolve conflicts if any
             git rebase --continue
@@ -267,14 +274,13 @@ jobs:
             \`\`\`bash
             git remote add upstream https://github.com/eclipse-jdt/eclipse.jdt.debug.git
             git fetch upstream master
-            git fetch origin master
             
-            # Find the fork point (where your branch diverged from origin/master)
-            FORK_POINT=$(git merge-base HEAD origin/master)
+            # Determine the number of commits in your PR (e.g., 3)
+            # You can find this on the PR page or by counting your commits
+            PR_COMMIT_COUNT=<number_of_commits_in_your_pr>
             
-            # Rebase only your PR commits onto upstream/master (excluding fork commits)
-            # The third argument (HEAD) specifies to rebase everything from FORK_POINT to HEAD
-            git rebase --onto upstream/master $FORK_POINT HEAD
+            # Rebase only your PR commits onto upstream/master
+            git rebase --onto upstream/master HEAD~\${PR_COMMIT_COUNT}
             
             git push --force-with-lease
             \`\`\``;
