@@ -35,15 +35,15 @@ jobs:
       - name: Check for upstream changes
         id: check-changes
         run: |
-          # Get current master commit
-          CURRENT_SHA=$(git rev-parse HEAD)
-          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          # Check if upstream has commits that we don't have
+          # This uses rev-list to count commits in upstream/master that aren't in HEAD
+          NEW_COMMITS=$(git rev-list --count HEAD..upstream/master)
           
-          if [ "$CURRENT_SHA" = "$UPSTREAM_SHA" ]; then
-            echo "No upstream changes detected"
+          if [ "$NEW_COMMITS" -eq 0 ]; then
+            echo "No new commits in upstream"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            echo "Upstream changes detected"
+            echo "Upstream has $NEW_COMMITS new commit(s)"
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
@@ -178,15 +178,15 @@ jobs:
         if: steps.check-auth.outputs.result == 'true'
         id: check-changes
         run: |
-          # Get current master commit
-          CURRENT_SHA=$(git rev-parse HEAD)
-          UPSTREAM_SHA=$(git rev-parse upstream/master)
+          # Check if upstream has commits that we don't have
+          # This uses rev-list to count commits in upstream/master that aren't in HEAD
+          NEW_COMMITS=$(git rev-list --count HEAD..upstream/master)
           
-          if [ "$CURRENT_SHA" = "$UPSTREAM_SHA" ]; then
-            echo "No upstream changes detected"
+          if [ "$NEW_COMMITS" -eq 0 ]; then
+            echo "No new commits in upstream"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            echo "Upstream changes detected"
+            echo "Upstream has $NEW_COMMITS new commit(s)"
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
