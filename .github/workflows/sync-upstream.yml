@@ -38,11 +38,11 @@ jobs:
           # Create temporary directory for fork-specific files
           mkdir -p /tmp/fork-specific
           
-          # Get list of all files in fork
-          ALL_FORK_FILES=$(git ls-tree -r HEAD --name-only 2>/dev/null || echo "")
+          # Get list of all files in fork (filtering for fork-specific happens in the loop)
+          ALL_FILES=$(git ls-tree -r HEAD --name-only 2>/dev/null || echo "")
           
           # For each file in fork, check if it exists in upstream
-          for file in $ALL_FORK_FILES; do
+          for file in $ALL_FILES; do
             if ! git cat-file -e upstream/master:"$file" 2>/dev/null; then
               echo "Fork-specific file: $file"
               # Create directory structure and copy file
@@ -52,7 +52,7 @@ jobs:
           done
           
           # Check if any fork-specific files were found
-          if [ -d "/tmp/fork-specific" ] && [ "$(find /tmp/fork-specific -type f)" ]; then
+          if [ -d "/tmp/fork-specific" ] && [ -n "$(find /tmp/fork-specific -type f)" ]; then
             echo "has_fork_files=true" >> $GITHUB_OUTPUT
             echo "Found fork-specific files:"
             find /tmp/fork-specific -type f
@@ -175,11 +175,11 @@ jobs:
           # Create temporary directory for fork-specific files
           mkdir -p /tmp/fork-specific
           
-          # Get list of all files in fork
-          ALL_FORK_FILES=$(git ls-tree -r HEAD --name-only 2>/dev/null || echo "")
+          # Get list of all files in fork (filtering for fork-specific happens in the loop)
+          ALL_FILES=$(git ls-tree -r HEAD --name-only 2>/dev/null || echo "")
           
           # For each file in fork, check if it exists in upstream
-          for file in $ALL_FORK_FILES; do
+          for file in $ALL_FILES; do
             if ! git cat-file -e upstream/master:"$file" 2>/dev/null; then
               echo "Fork-specific file: $file"
               # Create directory structure and copy file
@@ -189,7 +189,7 @@ jobs:
           done
           
           # Check if any fork-specific files were found
-          if [ -d "/tmp/fork-specific" ] && [ "$(find /tmp/fork-specific -type f)" ]; then
+          if [ -d "/tmp/fork-specific" ] && [ -n "$(find /tmp/fork-specific -type f)" ]; then
             echo "has_fork_files=true" >> $GITHUB_OUTPUT
             echo "Found fork-specific files:"
             find /tmp/fork-specific -type f
@@ -241,18 +241,18 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: '+1'
-            });
-            
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: '✅ Successfully synced fork master with `eclipse-jdt/eclipse.jdt.debug:master`'
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
             });
 
       - name: Add failure comment
@@ -260,13 +260,6 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: '-1'
-            });
-            
             const comment = `❌ Sync failed. Please check the workflow logs for details.
             
             [View workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})`;
@@ -276,6 +269,13 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
               body: comment
+            });
+            
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1'
             });
 
       - name: Fail workflow if push failed
