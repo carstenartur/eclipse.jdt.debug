@@ -38,11 +38,11 @@ jobs:
           # Create temporary directory for fork-specific files
           mkdir -p /tmp/fork-specific
           
-          # Get list of workflow files in fork
-          FORK_WORKFLOWS=$(git ls-tree -r HEAD --name-only .github/workflows/ 2>/dev/null || echo "")
+          # Get list of all files in fork
+          ALL_FORK_FILES=$(git ls-tree -r HEAD --name-only 2>/dev/null || echo "")
           
-          # For each workflow file in fork, check if it exists in upstream
-          for file in $FORK_WORKFLOWS; do
+          # For each file in fork, check if it exists in upstream
+          for file in $ALL_FORK_FILES; do
             if ! git cat-file -e upstream/master:"$file" 2>/dev/null; then
               echo "Fork-specific file: $file"
               # Create directory structure and copy file
@@ -52,7 +52,7 @@ jobs:
           done
           
           # Check if any fork-specific files were found
-          if [ -d "/tmp/fork-specific/.github" ]; then
+          if [ -d "/tmp/fork-specific" ] && [ "$(find /tmp/fork-specific -type f)" ]; then
             echo "has_fork_files=true" >> $GITHUB_OUTPUT
             echo "Found fork-specific files:"
             find /tmp/fork-specific -type f
@@ -69,13 +69,13 @@ jobs:
       - name: Restore fork-specific files
         if: steps.backup.outputs.has_fork_files == 'true'
         run: |
-          # Copy fork-specific files back
+          # Copy all fork-specific files back
           if [ -d "/tmp/fork-specific" ]; then
-            cp -r /tmp/fork-specific/.github ./ 2>/dev/null || true
+            cp -r /tmp/fork-specific/* ./ 2>/dev/null || true
           fi
           
           # Add all fork-specific changes
-          git add .github/
+          git add .
 
       - name: Commit fork-specific changes
         if: steps.backup.outputs.has_fork_files == 'true'
@@ -175,11 +175,11 @@ jobs:
           # Create temporary directory for fork-specific files
           mkdir -p /tmp/fork-specific
           
-          # Get list of workflow files in fork
-          FORK_WORKFLOWS=$(git ls-tree -r HEAD --name-only .github/workflows/ 2>/dev/null || echo "")
+          # Get list of all files in fork
+          ALL_FORK_FILES=$(git ls-tree -r HEAD --name-only 2>/dev/null || echo "")
           
-          # For each workflow file in fork, check if it exists in upstream
-          for file in $FORK_WORKFLOWS; do
+          # For each file in fork, check if it exists in upstream
+          for file in $ALL_FORK_FILES; do
             if ! git cat-file -e upstream/master:"$file" 2>/dev/null; then
               echo "Fork-specific file: $file"
               # Create directory structure and copy file
@@ -189,7 +189,7 @@ jobs:
           done
           
           # Check if any fork-specific files were found
-          if [ -d "/tmp/fork-specific/.github" ]; then
+          if [ -d "/tmp/fork-specific" ] && [ "$(find /tmp/fork-specific -type f)" ]; then
             echo "has_fork_files=true" >> $GITHUB_OUTPUT
             echo "Found fork-specific files:"
             find /tmp/fork-specific -type f
@@ -208,13 +208,13 @@ jobs:
       - name: Restore fork-specific files
         if: steps.backup.outputs.has_fork_files == 'true'
         run: |
-          # Copy fork-specific files back
+          # Copy all fork-specific files back
           if [ -d "/tmp/fork-specific" ]; then
-            cp -r /tmp/fork-specific/.github ./ 2>/dev/null || true
+            cp -r /tmp/fork-specific/* ./ 2>/dev/null || true
           fi
           
           # Add all fork-specific changes
-          git add .github/
+          git add .
 
       - name: Commit fork-specific changes
         if: steps.backup.outputs.has_fork_files == 'true'
