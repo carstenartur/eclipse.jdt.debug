@@ -82,7 +82,7 @@ jobs:
         run: |
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
-            git commit -m "Fork-specific CI and workflow configurations"
+            git commit -m "Fork-specific customizations"
             echo "✅ Fork-specific changes committed"
           else
             echo "ℹ️  No fork-specific changes to commit"
@@ -121,14 +121,14 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            github.rest.reactions.createForIssueComment({
+            await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
               content: '-1'
             });
             
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
@@ -143,7 +143,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            github.rest.reactions.createForIssueComment({
+            await github.rest.reactions.createForIssueComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
