@@ -82,7 +82,7 @@ jobs:
         run: |
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
-            git commit -m "Fork-specific customizations"
+            git commit -m "Fork-specific CI and workflow configurations"
             echo "✅ Fork-specific changes committed"
           else
             echo "ℹ️  No fork-specific changes to commit"
@@ -219,7 +219,7 @@ jobs:
         run: |
           # Check if there are changes to commit
           if ! git diff --cached --quiet; then
-            git commit -m "Fork-specific customizations"
+            git commit -m "Fork-specific CI and workflow configurations"
             echo "✅ Fork-specific changes committed"
           else
             echo "ℹ️  No fork-specific changes to commit"
