@@ -128,6 +128,7 @@ import org.eclipse.jdt.debug.testplugin.JavaTestPlugin;
 import org.eclipse.jdt.debug.tests.core.LiteralTests17;
 import org.eclipse.jdt.debug.tests.refactoring.MemberParser;
 import org.eclipse.jdt.debug.ui.IJavaDebugUIConstants;
+import org.eclipse.jdt.internal.debug.core.JDIDebugPlugin;
 import org.eclipse.jdt.internal.debug.core.model.JDIDebugTarget;
 import org.eclipse.jdt.internal.debug.eval.ast.engine.ASTEvaluationEngine;
 import org.eclipse.jdt.internal.debug.ui.BreakpointUtils;
@@ -135,7 +136,9 @@ import org.eclipse.jdt.internal.debug.ui.IJDIPreferencesConstants;
 import org.eclipse.jdt.internal.debug.ui.JDIDebugUIPlugin;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.IVMInstall;
+import org.eclipse.jdt.launching.IVMInstallChangedListener;
 import org.eclipse.jdt.launching.JavaRuntime;
+import org.eclipse.jdt.launching.PropertyChangeEvent;
 import org.eclipse.jdt.launching.environments.IExecutionEnvironment;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
@@ -169,6 +172,8 @@ import junit.framework.TestCase;
  */
 @SuppressWarnings("deprecation")
 public abstract class AbstractDebugTest extends TestCase implements  IEvaluationListener {
+
+	private static boolean setupFirstTest = false;
 
 	public static final String MULTI_OUTPUT_PROJECT_NAME = "MultiOutput";
 	public static final String BOUND_EE_PROJECT_NAME = "BoundEE";
@@ -264,6 +269,11 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 
 	@Override
 	protected void setUp() throws Exception {
+		if (!setupFirstTest) {
+			setupFirstTest = true;
+			TestUtil.logInfo("SETTING UP TESTS");
+			JavaRuntime.addVMInstallChangedListener(new LogVMInstallChanges());
+		}
 		TestUtil.logInfo("SETUP " + getClass().getSimpleName() + "." + getName());
 		super.setUp();
 		setPreferences();
@@ -1420,7 +1430,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 *             if the event is never received.
 	 */
 	protected Object launchAndWait(ILaunchConfiguration configuration, String mode, DebugEventWaiter waiter, boolean register) throws CoreException {
-		ILaunch launch = configuration.launch(mode, null, false, register);
+		ILaunch launch = configuration.launch(mode, new TimeoutMonitor(DEFAULT_TIMEOUT), false, register);
 		Object suspendee= waiter.waitForEvent();
 		if (suspendee == null) {
 			StringBuilder buf = new StringBuilder();
@@ -3089,5 +3099,35 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 
 	public interface StackFrameSupplier {
 		IJavaStackFrame get() throws Exception;
+	}
+
+	private static void logVMChange(String message, IVMInstall vm) {
+		String detailed = message + " " + vm.getName() + ", location: " + vm.getInstallLocation();
+		IStatus status = new Status(IStatus.INFO, JDIDebugPlugin.getUniqueIdentifier(), detailed, null);
+		JDIDebugPlugin.log(status);
+	}
+
+	private static class LogVMInstallChanges implements IVMInstallChangedListener {
+
+		@Override
+		public void vmRemoved(IVMInstall vm) {
+			logVMChange("VM removed", vm);
+		}
+
+		@Override
+		public void vmChanged(PropertyChangeEvent event) {
+		}
+
+		@Override
+		public void vmAdded(IVMInstall vm) {
+			logVMChange("VM added", vm);
+
+		}
+
+		@Override
+		public void defaultVMInstallChanged(IVMInstall previous, IVMInstall current) {
+			logVMChange("Default VM changed", current);
+		}
+
 	}
 }
