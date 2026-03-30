@@ -13,9 +13,11 @@
  *******************************************************************************/
 package org.eclipse.jdt.debug.tests.breakpoints;
 
+import org.eclipse.debug.core.DebugEvent;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.debug.core.IJavaLineBreakpoint;
 import org.eclipse.jdt.debug.core.IJavaThread;
+import org.eclipse.jdt.debug.testplugin.DebugEventWaiter;
 import org.eclipse.jdt.debug.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
 
@@ -63,18 +65,23 @@ public class ConditionalBreakpointsWithFileClass extends AbstractDebugTest {
 			mainThread = launchToBreakpoint(typeName);
 			mainThread.getTopStackFrame().stepInto();
 
-			if (JavaProjectHelper.isJava25_Compatible()) {
+			if (isJRE26plus) {
+				bp2 = createConditionalLineBreakpoint(374, "java.io.File", "true", true);
+			} else if (JavaProjectHelper.isJava25_Compatible()) {
 				bp2 = createConditionalLineBreakpoint(369, "java.io.File", "true", true);
 			} else {
 				bp2 = createConditionalLineBreakpoint(364, "java.io.File", "true", true);
 			}
 
+			DebugEventWaiter waiter = new DebugEventWaiter(DebugEvent.SUSPEND);
 			int hitLine = 0;
 			mainThread.resume();
-			Thread.sleep(1000);
+			waiter.waitForEvent();
 			assertTrue("Thread should be suspended", mainThread.isSuspended());
 			hitLine = mainThread.getStackFrames()[0].getLineNumber();
-			if (JavaProjectHelper.isJava25_Compatible()) {
+			if (isJRE26plus) {
+				assertEquals("Didn't suspend at the expected line", 374, hitLine);
+			} else if (JavaProjectHelper.isJava25_Compatible()) {
 				assertEquals("Didn't suspend at the expected line", 369, hitLine);
 			} else {
 				assertEquals("Didn't suspend at the expected line", 364, hitLine);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -77,6 +77,8 @@ public class DebugUIMessages extends NLS {
 	public static String JavaDebugPreferencePage_ShowStepResult_local;
 	public static String JavaDebugPreferencePage_ShowStepResult_remote;
 	public static String JavaDebugPreferencePage_ShowStepTimeout_ms_1;
+
+	public static String JavaDebugPreferencePage_StatementLevelStepping;
 	public static String JavaDebugPreferencePage_Communication_1;
 	public static String JavaDebugPreferencePage_Debugger__timeout__2;
 	public static String JavaDebugPreferencePage__Launch_timeout__ms___1;
@@ -143,6 +145,8 @@ public class DebugUIMessages extends NLS {
 	public static String JDIDebugUIPlugin_3;
     public static String JDIDebugUIPlugin_4;
 	public static String JDIDebugUIPlugin_5;
+
+	public static String JDIDebugUIPlugin_MultiStatusError;
 
 	public static String JDIModelPresentation__No_explicit_return_value__30;
 	public static String JDIModelPresentation__conditional__2;
@@ -476,4 +480,8 @@ public class DebugUIMessages extends NLS {
 	public static String fExceptionBreakpointMsg;
 
 	protected static String JavaDebugOptionsManager_Lambda_Breakpoint;
+
+	public static String JDIDebugUIPlugin_MultiStatusWarning;
+
+	public static String JDIDebugUIPlugin_MultiStatusInfo;
 }

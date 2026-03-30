@@ -128,6 +128,7 @@ import org.eclipse.jdt.debug.testplugin.JavaTestPlugin;
 import org.eclipse.jdt.debug.tests.core.LiteralTests17;
 import org.eclipse.jdt.debug.tests.refactoring.MemberParser;
 import org.eclipse.jdt.debug.ui.IJavaDebugUIConstants;
+import org.eclipse.jdt.internal.core.JavaModelManager;
 import org.eclipse.jdt.internal.debug.core.JDIDebugPlugin;
 import org.eclipse.jdt.internal.debug.core.model.JDIDebugTarget;
 import org.eclipse.jdt.internal.debug.eval.ast.engine.ASTEvaluationEngine;
@@ -140,6 +141,7 @@ import org.eclipse.jdt.launching.IVMInstallChangedListener;
 import org.eclipse.jdt.launching.JavaRuntime;
 import org.eclipse.jdt.launching.PropertyChangeEvent;
 import org.eclipse.jdt.launching.environments.IExecutionEnvironment;
+import org.eclipse.jdt.launching.environments.IExecutionEnvironmentsManager;
 import org.eclipse.jface.dialogs.ErrorDialog;
 import org.eclipse.jface.dialogs.MessageDialogWithToggle;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -153,7 +155,9 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.console.ConsolePlugin;
 import org.eclipse.ui.console.IConsole;
+import org.eclipse.ui.console.IConsoleManager;
 import org.eclipse.ui.console.IHyperlink;
 import org.eclipse.ui.console.TextConsole;
 import org.eclipse.ui.internal.console.ConsoleHyperlinkPosition;
@@ -188,6 +192,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	public static final String TWENTYTHREE_PROJECT_NAME = "Two_Three";
 	public static final String TWENTYFOUR_PROJECT_NAME = "Two_Four";
 	public static final String TWENTYFIVE_PROJECT_NAME = "Two_Five";
+	public static final String TWENTYSIX_PROJECT_NAME = "Two_Six";
 	public static final String BOUND_JRE_PROJECT_NAME = "BoundJRE";
 	public static final String MR_PROJECT_NAME = "MR";
 	public static final String CLONE_SUFFIX = "Clone";
@@ -213,7 +218,8 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 			"Bug534319earlyStart", "Bug534319lateStart", "Bug534319singleThread", "Bug534319startBetwen", "MethodCall", "Bug538303", "Bug540243",
 			"OutSync", "OutSync2", "ConsoleOutputUmlaut", "ErrorRecurrence", "ModelPresentationTests", "Bug565982",
 			"SuspendVMConditionalBreakpointsTestSnippet", "FileConditionSnippet2", "compare.CompareObjectsStringTest", "compare.CompareListObjects",
-			"compare.CompareMapObjects", "compare.CompareSetObjects", "compare.CompareNormalObjects", "compare.CompareArrayObjects" };
+			"compare.CompareMapObjects", "compare.CompareSetObjects", "compare.CompareNormalObjects", "compare.CompareArrayObjects",
+			"StatementStep", "StatementStepArgument", "StatementStepNested", "StatementStepWithOperations" };
 
 	/**
 	 * the default timeout
@@ -251,11 +257,13 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	private static boolean loaded23 = false;
 	private static boolean loaded24 = false;
 	private static boolean loaded25 = false;
+	private static boolean loaded26 = false;
 	private static boolean loadedEE = false;
 	private static boolean loadedJRE = false;
 	private static boolean loadedMulti = false;
 	private static boolean loadedMR;
 	private static boolean welcomeClosed = false;
+	protected boolean isJRE26plus = false;
 
 	/**
 	 * Constructor
@@ -265,6 +273,10 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		// set error dialog to non-blocking to avoid hanging the UI during test
 		ErrorDialog.AUTOMATED_MODE = true;
 		SafeRunnable.setIgnoreErrors(true);
+		String javaVersion = System.getProperty("java.version");
+		if (javaVersion.startsWith("26")) {
+			isJRE26plus = true;
+		}
 	}
 
 	@Override
@@ -366,6 +378,11 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	        		handleProjectCreationException(e, ONE_FOUR_PROJECT_CLOSED_NAME, jp);
 	        	}
 				jp = createProject(ONE_FOUR_PROJECT_NAME, JavaProjectHelper.TEST_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_1_8_EE_NAME, false);
+				if (isJRE26plus) {
+					// these files cannot be compiled against 26+
+					jp.getProject().getFile("src/AppletImpl.java").delete(true, null);
+					jp.getProject().getFile("src/RunnableAppletImpl.java").delete(true, null);
+				}
 	        	IPackageFragmentRoot src = jp.findPackageFragmentRoot(new Path(ONE_FOUR_PROJECT_NAME).append(JavaProjectHelper.SRC_DIR).makeAbsolute());
 	        	assertNotNull("The 'src' package fragment root should not be null", src);
 	        	File root = JavaTestPlugin.getDefault().getFileInPlugin(new Path("testjars"));
@@ -745,7 +762,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		try {
 			if (!loaded25) {
 				jp = createProject(TWENTYFIVE_PROJECT_NAME, JavaProjectHelper.TEST_25_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_25_EE_NAME, false);
-				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.ENABLED);
+				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.DISABLED);
 				jp.setOption(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_25);
 				jp.setOption(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_25);
 				jp.setOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_25);
@@ -770,6 +787,36 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		}
 	}
 
+	synchronized void assert26Project() {
+		IJavaProject jp = null;
+		ArrayList<ILaunchConfiguration> cfgs = new ArrayList<>(1);
+		try {
+			if (!loaded26) {
+				jp = createProject(TWENTYSIX_PROJECT_NAME, JavaProjectHelper.TEST_26_SRC_DIR.toString(), JavaProjectHelper.JAVA_SE_26_EE_NAME, false);
+				jp.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.DISABLED);
+				jp.setOption(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_26);
+				jp.setOption(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_26);
+				jp.setOption(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_26);
+				cfgs.add(createLaunchConfiguration(jp, "Main1"));
+				cfgs.add(createLaunchConfiguration(jp, "Main2"));
+				loaded26 = true;
+				waitForBuild();
+				assertNoErrorMarkersExist(jp.getProject());
+			}
+		} catch (Exception e) {
+			try {
+				if (jp != null) {
+					jp.getProject().delete(true, true, null);
+					for (int i = 0; i < cfgs.size(); i++) {
+						cfgs.get(i).delete();
+					}
+				}
+			} catch (CoreException ce) {
+				// ignore
+			}
+			handleProjectCreationException(e, TWENTYSIX_PROJECT_NAME, jp);
+		}
+	}
 	/**
 	 * Creates the 'BoundJRE' project used for the JRE testing
 	 */
@@ -1107,6 +1154,16 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	}
 
 	/**
+	 * Returns the 'Two_Six' project, used for Java 26 tests.
+	 *
+	 * @return the test project
+	 */
+	protected IJavaProject get26Project() {
+		assert26Project();
+		return getJavaProject(TWENTYSIX_PROJECT_NAME);
+	}
+
+	/**
 	 * Returns the 'BoundJRE' project
 	 *
 	 * @return the test project
@@ -1430,7 +1487,13 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 	 *             if the event is never received.
 	 */
 	protected Object launchAndWait(ILaunchConfiguration configuration, String mode, DebugEventWaiter waiter, boolean register) throws CoreException {
-		ILaunch launch = configuration.launch(mode, new TimeoutMonitor(DEFAULT_TIMEOUT), false, register);
+		ILaunch launch;
+		try {
+			launch = configuration.launch(mode, new TimeoutMonitor(DEFAULT_TIMEOUT), false, register);
+		} catch (Throwable t) {
+			logProcessConsoleContents();
+			throw t;
+		}
 		Object suspendee= waiter.waitForEvent();
 		if (suspendee == null) {
 			StringBuilder buf = new StringBuilder();
@@ -2766,6 +2829,7 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
                 Job.getJobManager().join(ResourcesPlugin.FAMILY_MANUAL_BUILD, null);
 				// Let also all other pending jobs proceed, ignore console jobs
 				TestUtil.waitForJobs("waitForBuild", 100, 5000, ProcessConsole.class);
+				JavaModelManager.getIndexManager().waitForIndex(false, null);
                 wasInterrupted = false;
             } catch (OperationCanceledException e) {
                 e.printStackTrace();
@@ -3097,6 +3161,42 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		return markersInfo.toString();
 	}
 
+	/**
+	 * JDT tests run in different environments where different major JVM installations might be selected as "default" JVM for a specific Execution
+	 * Environment (EE). Some test cases projects requires JavaSE-N EE, which can be resolved to e.g. Java 11, 17 or 21, depending on the installed
+	 * JVMs. JVM modules vary between Java major versions, while we need a stable set of modules for the test case. Therefore we "pin" the JVM used
+	 * for the JavaSE-N EE to the JVM on which the tests are executed - to avoid tests failing in different test environments.
+	 *
+	 * @param environmentId The ID of the EE, e.g.: "JavaSE-9"
+	 * @return The default VM install for the EE, before we change it.
+	 */
+	protected static IVMInstall prepareExecutionEnvironment(String environmentId) {
+		IVMInstall vm = JavaRuntime.getDefaultVMInstall();
+		IExecutionEnvironment environment = getExecutionEnvironment(environmentId);
+		IVMInstall defaultVM = environment.getDefaultVM();
+		environment.setDefaultVM(vm);
+		TestUtil.logInfo("Set VM \"" + vm.getName() + "\" for execution environments: " + environment.getId());
+		return defaultVM;
+	}
+
+	/**
+	 * Set the default VM of an EE.
+	 *
+	 * @param environmentId The ID of the EE, e.g.: "JavaSE-9"
+	 * @param defaultVM The default VM to set.
+	 */
+	protected static void setExecutionEnvironment(String environmentId, IVMInstall defaultVM) {
+		IExecutionEnvironment environment = getExecutionEnvironment(environmentId);
+		environment.setDefaultVM(defaultVM);
+		TestUtil.logInfo("Set default VM for execution environment: " + environment.getId());
+	}
+
+	private static IExecutionEnvironment getExecutionEnvironment(String environmentId) {
+		IExecutionEnvironmentsManager manager = JavaRuntime.getExecutionEnvironmentsManager();
+		IExecutionEnvironment[] environments = manager.getExecutionEnvironments();
+		return Arrays.stream(environments).filter(e -> environmentId.equals(e.getId())).findFirst().orElseThrow();
+	}
+
 	public interface StackFrameSupplier {
 		IJavaStackFrame get() throws Exception;
 	}
@@ -3105,6 +3205,25 @@ public abstract class AbstractDebugTest extends TestCase implements  IEvaluation
 		String detailed = message + " " + vm.getName() + ", location: " + vm.getInstallLocation();
 		IStatus status = new Status(IStatus.INFO, JDIDebugPlugin.getUniqueIdentifier(), detailed, null);
 		JDIDebugPlugin.log(status);
+	}
+
+	private static void logProcessConsoleContents() {
+		try {
+			StringBuilder buf = new StringBuilder();
+			IConsoleManager manager = ConsolePlugin.getDefault().getConsoleManager();
+			for (IConsole console : manager.getConsoles()) {
+				if (console instanceof ProcessConsole) {
+					ProcessConsole processConsole = (ProcessConsole) console;
+					String string = processConsole.getDocument().get();
+					buf.append("Console output for \"" + processConsole.getName() + "\" follows:\n"); //$NON-NLS-1$
+					buf.append(string);
+				}
+			}
+			buf.append("\n"); //$NON-NLS-1$
+			DebugPlugin.log(new Status(IStatus.INFO, "org.eclipse.jdt.debug.ui.tests", buf.toString())); //$NON-NLS-1$
+		} catch (Throwable t) {
+			DebugPlugin.log(t);
+		}
 	}
 
 	private static class LogVMInstallChanges implements IVMInstallChangedListener {

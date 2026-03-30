@@ -24,16 +24,12 @@ import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.debug.testplugin.JavaProjectHelper;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
-import org.eclipse.jdt.debug.tests.TestUtil;
 import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jdt.launching.JavaRuntime;
-import org.eclipse.jdt.launching.environments.IExecutionEnvironment;
-import org.eclipse.jdt.launching.environments.IExecutionEnvironmentsManager;
 
 public class ModuleOptionsTests extends AbstractDebugTest {
-
-	private static final String JAVASE_9 = "JavaSE-9";
 
 	private static final String ASSUMED_DEFAULT_MODULES_9 = "java.se," //
 			// + "javafx.base,javafx.controls,javafx.fxml,javafx.graphics,javafx.media,javafx.swing,javafx.web," REMOVED in 10
@@ -69,6 +65,35 @@ public class ModuleOptionsTests extends AbstractDebugTest {
 			+ "jdk.unsupported.desktop," //
 			+ "jdk.xml.dom";
 
+	private static final String ASSUMED_DEFAULT_MODULES_26 = "java.base," //
+			+ "java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging," //
+			+ "java.management,java.management.rmi,java.naming,java.net.http,java.prefs,java.rmi," //
+			+ "java.scripting,java.security.jgss,java.security.sasl,java.smartcardio," //
+			+ "java.sql,java.sql.rowset,java.transaction.xa,java.xml,java.xml.crypto," //
+			+ "jdk.accessibility,jdk.attach,jdk.compiler,jdk.dynalink,jdk.httpserver," //
+			+ "jdk.incubator.vector,"
+			+ "jdk.jartool,jdk.javadoc,jdk.jconsole,jdk.jdi," //
+			+ "jdk.jfr," //
+			+ "jdk.jshell,jdk.management," //
+			+ "jdk.management.jfr," //
+			+ "jdk.net,jdk.nio.mapmode," //
+			+ "jdk.sctp,jdk.security.auth,jdk.security.jgss,jdk.unsupported," //
+			+ "jdk.unsupported.desktop," //
+			+ "jdk.xml.dom";
+
+	private static final String ASSUMED_DEFAULT_MODULES_9_ON_26 = "java.se," //
+			+ "jdk.accessibility,jdk.attach,jdk.compiler,jdk.dynalink,jdk.httpserver," //
+			+ "jdk.incubator.vector," //
+			+ "jdk.jartool,jdk.javadoc,jdk.jconsole,jdk.jdi," //
+			+ "jdk.jfr," //
+			+ "jdk.jshell," //
+			+ "jdk.management," //
+			+ "jdk.management.jfr," //
+			+ "jdk.net," //
+			+ "jdk.nio.mapmode," //
+			+ "jdk.sctp,jdk.security.auth,jdk.security.jgss,jdk.unsupported," //
+			+ "jdk.unsupported.desktop," //
+			+ "jdk.xml.dom";
 	private IVMInstall defaultVM9;
 
 	public ModuleOptionsTests(String name) {
@@ -78,13 +103,13 @@ public class ModuleOptionsTests extends AbstractDebugTest {
 	@Override
 	protected void setUp() throws Exception {
 		super.setUp();
-		prepareExecutionEnvironment9();
+		defaultVM9 = prepareExecutionEnvironment(JavaProjectHelper.JAVA_SE_9_EE_NAME);
 	}
 
 	@Override
 	protected void tearDown() throws Exception {
 		try {
-			restoreExecutionEnvironment9();
+			setExecutionEnvironment(JavaProjectHelper.JAVA_SE_9_EE_NAME, defaultVM9);
 		} finally {
 			super.tearDown();
 		}
@@ -166,7 +191,11 @@ public class ModuleOptionsTests extends AbstractDebugTest {
 			List<String> defaultModules = getDefaultModules(javaProject);
 			String expectedModules;
 			String moduleList = String.join(",", defaultModules);
-			assertEquals(ASSUMED_DEFAULT_MODULES_9, moduleList);
+			if (Runtime.version().feature() >= 26) {
+				assertEquals(ASSUMED_DEFAULT_MODULES_9_ON_26, moduleList);
+			} else {
+				assertEquals(ASSUMED_DEFAULT_MODULES_9, moduleList);
+			}
 			switch (moduleList) {
 				case ASSUMED_DEFAULT_MODULES_9:
 					expectedModules = //
@@ -177,8 +206,19 @@ public class ModuleOptionsTests extends AbstractDebugTest {
 							+ "jdk.net," //
 							+ "jdk.nio.mapmode," //
 							// + "jdk.packager,jdk.packager.services,jdk.plugin.dom,"
-									// + "jdk.scripting.nashorn,"
+							// + "jdk.scripting.nashorn,"
 							+ "jdk.sctp,"
+							+ "jdk.security.auth,jdk.security.jgss,jdk.unsupported," //
+							+ "jdk.unsupported.desktop,jdk.xml.dom";
+					break;
+				case ASSUMED_DEFAULT_MODULES_9_ON_26:
+					expectedModules = "java.instrument,java.net.http,java.scripting,java.sql.rowset,java.xml.crypto," //
+							+ "jdk.accessibility,jdk.dynalink,jdk.httpserver,jdk.incubator.vector," //
+							+ "jdk.jartool,jdk.jconsole,jdk.jshell," //
+							+ "jdk.management.jfr," //
+							+ "jdk.net," //
+							+ "jdk.nio.mapmode," //
+							+ "jdk.sctp," //
 							+ "jdk.security.auth,jdk.security.jgss,jdk.unsupported," //
 							+ "jdk.unsupported.desktop,jdk.xml.dom";
 					break;
@@ -226,6 +266,13 @@ public class ModuleOptionsTests extends AbstractDebugTest {
 						+ "jdk.unsupported.desktop," //
 						+ "jdk.xml.dom";
 				break;
+			case ASSUMED_DEFAULT_MODULES_26:
+				expectedModules = "java.instrument,java.net.http,java.scripting,java.smartcardio,java.sql.rowset,java.xml.crypto,"
+						+ "jdk.accessibility," + "jdk.dynalink," + "jdk.httpserver," + "jdk.incubator.vector,"
+						+ "jdk.jartool,jdk.jconsole,jdk.jshell," + "jdk.management.jfr," + "jdk.net," + "jdk.nio.mapmode," + "jdk.sctp,"
+						+ "jdk.security.auth,jdk.security.jgss,jdk.unsupported," + "jdk.unsupported.desktop,"
+						+ "jdk.xml.dom";
+				break;
 			default:
 				fail("Unknown set of default modules " + moduleList);
 				return;
@@ -249,35 +296,5 @@ public class ModuleOptionsTests extends AbstractDebugTest {
 		IVMInstall defaultVm = JavaRuntime.getDefaultVMInstall();
 		IVMInstall vm = JavaRuntime.getVMInstall(javaProject);
 		assertEquals("Expected default VM but got: " + vm.getInstallLocation(), defaultVm.getName(), vm.getName());
-	}
-
-	/**
-	 * JDT tests run in different environments where different major JVM installations might be selected as "default" JVM for a specific Execution Environment (EE).
-	 * This test cases project requires JavaSE-9 EE, which can be resolved to e.g. Java 11, 17 or 21, depending on the installed JVMs.
-	 * JVM modules vary between Java major versions, while we need a stable set of modules for the test case.
-	 * Therefore we "pin" the JVM used for the JavaSE-9 EE to the JVM on which the tests are executed - to avoid tests failing in different test environments.
-	 */
-	private void prepareExecutionEnvironment9() {
-		IVMInstall vm = JavaRuntime.getDefaultVMInstall();
-		IExecutionEnvironment environment9 = getExecutionEnvironment9();
-		defaultVM9 = environment9.getDefaultVM();
-		environment9.setDefaultVM(vm);
-		TestUtil.logInfo("Set VM \"" + vm.getName() + "\" for execution environments: " + environment9.getId());
-	}
-
-	private void restoreExecutionEnvironment9() {
-		IExecutionEnvironment environment9 = getExecutionEnvironment9();
-		environment9.setDefaultVM(defaultVM9);
-		TestUtil.logInfo("Restored default VM for execution environment: " + environment9.getId());
-	}
-
-	private static IExecutionEnvironment getExecutionEnvironment9() {
-		IExecutionEnvironmentsManager manager = JavaRuntime.getExecutionEnvironmentsManager();
-		IExecutionEnvironment[] environments = manager.getExecutionEnvironments();
-		return Arrays.stream(environments).filter(ModuleOptionsTests::isEnvironment9).findFirst().orElseThrow();
-	}
-
-	private static boolean isEnvironment9(IExecutionEnvironment environment) {
-		return JAVASE_9.equals(environment.getId());
 	}
 }
