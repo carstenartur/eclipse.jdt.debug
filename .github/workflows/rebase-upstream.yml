@@ -127,7 +127,7 @@ jobs:
 
       - name: Checkout PR branch
         if: steps.check-auth.outputs.result == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Security note: This checks out untrusted code, but is protected by:
           # 1. Authorization check (only OWNER/MEMBER/COLLABORATOR can trigger)

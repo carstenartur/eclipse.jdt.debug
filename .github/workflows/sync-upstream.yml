@@ -16,7 +16,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout fork master
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: master
           fetch-depth: 0
@@ -156,7 +156,7 @@ jobs:
             });
 
       - name: Checkout fork master
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: master
           fetch-depth: 0
