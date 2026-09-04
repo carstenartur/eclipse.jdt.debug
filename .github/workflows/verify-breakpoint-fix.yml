@@ -27,6 +27,14 @@ jobs:
         shell: bash
         run: echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
 
+      - name: Set up Java 17 toolchain
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          mvn-toolchain-id: JavaSE-17
+          mvn-toolchain-vendor: temurin
+
       - name: Set up Java 26 build VM
         uses: actions/setup-java@v5
         with:
