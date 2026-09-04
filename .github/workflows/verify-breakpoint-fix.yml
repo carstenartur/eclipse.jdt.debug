@@ -35,6 +35,14 @@ jobs:
           mvn-toolchain-id: JavaSE-17
           mvn-toolchain-vendor: temurin
 
+      - name: Set up Java 21 toolchain
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          mvn-toolchain-id: JavaSE-21
+          mvn-toolchain-vendor: temurin
+
       - name: Set up Java 26 build VM
         uses: actions/setup-java@v5
         with:
@@ -76,8 +84,10 @@ jobs:
           git config user.name "Verification Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add verification/negative-control-diagnostic.log
-          git commit -m "Record breakpoint negative control diagnostics"
-          git push origin HEAD:"${GITHUB_REF_NAME}"
+          if ! git diff --cached --quiet; then
+            git commit -m "Record breakpoint negative control diagnostics"
+            git push origin HEAD:"${GITHUB_REF_NAME}"
+          fi
 
           cat verification/negative-control-diagnostic.log
           if [ "$result" -eq 0 ]; then
@@ -92,7 +102,7 @@ jobs:
       - name: Apply production fix
         shell: bash
         run: |
-          git reset --hard HEAD^
+          git reset --hard HEAD
           python3 verification/apply_full.py
           git diff --check
 
