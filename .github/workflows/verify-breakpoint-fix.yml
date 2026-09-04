@@ -56,7 +56,22 @@ jobs:
             -DtrimStackTrace=false > /tmp/negative-control.log 2>&1
           result=$?
           set -e
-          cat /tmp/negative-control.log
+
+          {
+            echo "exit_code=$result"
+            echo "--- selected diagnostics ---"
+            grep -nE "ERROR|FAILURE|Tests run|JavaBreakpoint|JDIThread|Breakpoint\.equals|Caused by|testRemovalWithoutMarker" /tmp/negative-control.log | tail -n 300 || true
+            echo "--- log tail ---"
+            tail -n 300 /tmp/negative-control.log
+          } > verification/negative-control-diagnostic.log
+
+          git config user.name "Verification Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add verification/negative-control-diagnostic.log
+          git commit -m "Record breakpoint negative control diagnostics"
+          git push origin HEAD:"${GITHUB_REF_NAME}"
+
+          cat verification/negative-control-diagnostic.log
           if [ "$result" -eq 0 ]; then
             echo "Regression test unexpectedly passed without the production fix."
             exit 1
@@ -69,7 +84,7 @@ jobs:
       - name: Apply production fix
         shell: bash
         run: |
-          git reset --hard HEAD
+          git reset --hard HEAD^
           python3 verification/apply_full.py
           git diff --check
 
