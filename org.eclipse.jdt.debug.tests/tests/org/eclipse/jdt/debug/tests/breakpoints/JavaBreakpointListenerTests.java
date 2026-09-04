@@ -1,5 +1,5 @@
 /*******************************************************************************
- *  Copyright (c) 2000, 2015 IBM Corporation and others.
+ *  Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  *  This program and the accompanying materials
  *  are made available under the terms of the Eclipse Public License 2.0
@@ -16,12 +16,14 @@ package org.eclipse.jdt.debug.tests.breakpoints;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.resources.IncrementalProjectBuilder;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.debug.core.DebugException;
+import org.eclipse.debug.core.model.IBreakpoint;
 import org.eclipse.debug.core.model.IStackFrame;
 import org.eclipse.debug.core.model.IValue;
 import org.eclipse.debug.core.model.IVariable;
@@ -43,6 +45,7 @@ import org.eclipse.jdt.debug.testplugin.EvalualtionBreakpointListener;
 import org.eclipse.jdt.debug.testplugin.GlobalBreakpointListener;
 import org.eclipse.jdt.debug.testplugin.ResumeBreakpointListener;
 import org.eclipse.jdt.debug.tests.AbstractDebugTest;
+import org.eclipse.jdt.internal.debug.core.model.JDIDebugTarget;
 
 /**
  * Tests breakpoint creation/deletion and listener interfaces.
@@ -1187,6 +1190,67 @@ public class JavaBreakpointListenerTests extends AbstractDebugTest implements IJ
 			assertEquals("b", listeners[1]);
 
 		} finally {
+			removeAllBreakpoints();
+		}
+	}
+
+
+	private static boolean containsByIdentity(IBreakpoint[] breakpoints, IBreakpoint expected) {
+		for (IBreakpoint breakpoint : breakpoints) {
+			if (breakpoint == expected) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean containsByIdentity(List<IBreakpoint> breakpoints, IBreakpoint expected) {
+		synchronized (breakpoints) {
+			for (IBreakpoint breakpoint : breakpoints) {
+				if (breakpoint == expected) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Tests that a breakpoint without an associated marker is completely removed
+	 * from a debug target and its suspended thread.
+	 */
+	public void testRemovalWithoutMarker() throws Exception {
+		String typeName = "HitCountLooper";
+		IJavaLineBreakpoint bp = createLineBreakpoint(17, typeName);
+		IJavaThread thread = null;
+		IMarker marker = null;
+		try {
+			thread = launchToLineBreakpoint(typeName, bp);
+			JDIDebugTarget target = (JDIDebugTarget) thread.getDebugTarget();
+			assertTrue("Breakpoint should be installed in the debug target",
+					containsByIdentity(target.getBreakpoints(), bp));
+			assertTrue("Breakpoint should be current in the suspended thread",
+					containsByIdentity(thread.getBreakpoints(), bp));
+
+			marker = bp.getMarker();
+			try {
+				bp.setMarker(null);
+			} catch (CoreException e) {
+				// Expected: reconfiguration cannot complete without a marker.
+			}
+			assertNull("Breakpoint should no longer have an associated marker", bp.getMarker());
+
+			target.breakpointRemoved(bp, null);
+
+			assertFalse("Stale breakpoint remained in the debug target",
+					containsByIdentity(target.getBreakpoints(), bp));
+			assertFalse("Stale breakpoint remained in the suspended thread",
+					containsByIdentity(thread.getBreakpoints(), bp));
+		} finally {
+			if (bp.getMarker() == null && marker != null) {
+				bp.setMarker(marker);
+			}
+			terminateAndRemove(thread);
 			removeAllBreakpoints();
 		}
 	}
