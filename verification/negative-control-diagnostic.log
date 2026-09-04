@@ -12,316 +12,331 @@ exit_code=1
 84:[INFO] Resolving MavenDependencyRoots = [GroupId = jakarta.activation, ArtifactId = jakarta.activation-api, Version = 2.1.4, ArtifactType = jar, GroupId = jakarta.annotation, ArtifactId = jakarta.annotation-api, Version = 1.3.5, ArtifactType = jar, GroupId = jakarta.annotation, ArtifactId = jakarta.annotation-api, Version = 3.0.0, ArtifactType = jar, GroupId = jakarta.inject, ArtifactId = jakarta.inject-api, Version = 1.0.5, ArtifactType = jar, GroupId = jakarta.inject, ArtifactId = jakarta.inject-api, Version = 2.0.1, ArtifactType = jar, GroupId = jakarta.xml.bind, ArtifactId = jakarta.xml.bind-api, Version = 4.0.5, ArtifactType = jar], IncludeDependencyScope = [compile], MissingManifestStrategy = ERROR, IncludeSource = true
 89:[INFO] Resolving MavenDependencyRoots = [GroupId = org.osgi, ArtifactId = org.osgi.test.assertj.framework, Version = 1.3.0, ArtifactType = jar, GroupId = org.osgi, ArtifactId = org.osgi.test.assertj.log, Version = 1.3.0, ArtifactType = jar, GroupId = org.osgi, ArtifactId = org.osgi.test.assertj.promise, Version = 1.3.0, ArtifactType = jar, GroupId = org.osgi, ArtifactId = org.osgi.test.common, Version = 1.3.0, ArtifactType = jar, GroupId = org.osgi, ArtifactId = org.osgi.test.junit4, Version = 1.3.0, ArtifactType = jar, GroupId = org.osgi, ArtifactId = org.osgi.test.junit5.cm, Version = 1.3.0, ArtifactType = jar, GroupId = org.osgi, ArtifactId = org.osgi.test.junit5, Version = 1.3.0, ArtifactType = jar], IncludeDependencyScope = [compile], MissingManifestStrategy = ERROR, IncludeSource = true
 90:[INFO] Resolving MavenDependencyRoots = [GroupId = org.commonmark, ArtifactId = commonmark-ext-gfm-tables, Version = 0.30.0, ArtifactType = jar, GroupId = org.commonmark, ArtifactId = commonmark, Version = 0.30.0, ArtifactType = jar], IncludeDependencyScope = [compile], MissingManifestStrategy = ERROR, IncludeSource = true
-375:[INFO] org.eclipse.jdt.debug.ui 3.15.600-SNAPSHOT ......... FAILURE [ 13.966 s]
-378:[INFO] BUILD FAILURE
-383:[ERROR] Failed to execute goal org.eclipse.tycho:tycho-compiler-plugin:5.0.4:compile (default-compile) on project org.eclipse.jdt.debug.ui: useJDK = BREE configured, but no toolchain of type 'jdk' with id 'JavaSE-21' found. See https://maven.apache.org/guides/mini/guide-using-toolchains.html -> [Help 1]
-384:[ERROR] 
-385:[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
-386:[ERROR] Re-run Maven using the -X switch to enable full debug logging.
-387:[ERROR] 
-388:[ERROR] For more information about the errors and possible solutions, please read the following articles:
-389:[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
-390:[ERROR] 
-391:[ERROR] After correcting the problems, you can resume the build with the command
-392:[ERROR]   mvn <args> -rf :org.eclipse.jdt.debug.ui
+615:Running org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests
+617:13:05:51.011 SETUP JavaBreakpointListenerTests.testRemovalWithoutMarker
+621:13:05:56.040 TDOWN JavaBreakpointListenerTests.testRemovalWithoutMarker
+622:Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 5.132 s <<< FAILURE! -- in org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests
+623:org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests.testRemovalWithoutMarker -- Time elapsed: 5.118 s <<< ERROR!
+624:java.lang.NullPointerException: Cannot invoke "org.eclipse.core.resources.IMarker.exists()" because the return value of "org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.getMarker()" is null
+625:	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.deregisterRequest(JavaBreakpoint.java:289)
+626:	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.removeRequests(JavaBreakpoint.java:807)
+627:	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.removeFromTarget(JavaBreakpoint.java:748)
+630:	at org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests.testRemovalWithoutMarker(JavaBreakpointListenerTests.java:1243)
+646:  JavaBreakpointListenerTests>AbstractDebugTest.runBare:3004->testRemovalWithoutMarker:1243 » NullPointer Cannot invoke "org.eclipse.core.resources.IMarker.exists()" because the return value of "org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.getMarker()" is null
+648:Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+660:[INFO] org.eclipse.jdt.debug.tests 3.12.1000-SNAPSHOT ..... FAILURE [ 39.528 s]
+662:[INFO] BUILD FAILURE
+667:[ERROR] Failed to execute goal org.eclipse.tycho:tycho-surefire-plugin:5.0.4:test (default-test) on project org.eclipse.jdt.debug.tests: There are test failures.
+668:[ERROR] 
+669:[ERROR] Please refer to /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/surefire-reports for the individual test results.
+670:[ERROR] -> [Help 1]
+671:[ERROR] 
+672:[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+673:[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+674:[ERROR] 
+675:[ERROR] For more information about the errors and possible solutions, please read the following articles:
+676:[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+677:[ERROR] 
+678:[ERROR] After correcting the problems, you can resume the build with the command
+679:[ERROR]   mvn <args> -rf :org.eclipse.jdt.debug.tests
 --- log tail ---
-[INFO] Artifact org.codehaus.mojo:animal-sniffer-annotations:jar:1.9 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [eclipse-hosted (https://repo.eclipse.org/content/repositories/eclipse/, default, releases+snapshots), eclipse (https://download.eclipse.org/eclipse/updates/4.42-I-builds/, p2, disabled), central (https://repo.maven.apache.org/maven2, default, releases), apache.snapshots (https://repository.apache.org/snapshots, default, snapshots)]
-[INFO] 
-[INFO] --- clean:3.5.0:clean (default-clean) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:build-qualifier (default-build-qualifier) @ org.eclipse.jdt.debug ---
-[INFO] The project's OSGi version is 3.26.100.v20260714-1432
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:validate-id (default-validate-id) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:validate-version (default-validate-version) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- target-platform-configuration:5.0.4:target-platform (default-target-platform) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-compiler:5.0.4:validate-classpath (default-validate-classpath) @ org.eclipse.jdt.debug ---
-[INFO] Resolving class path of [bundle] JDI Debug Model
-[INFO] 
-[INFO] --- build-helper:3.6.1:add-source (eclipse-classpath-add-source-1) @ org.eclipse.jdt.debug ---
-[INFO] Source directory: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/jdi added.
-[INFO] 
-[INFO] --- build-helper:3.6.1:add-source (eclipse-classpath-add-source-2) @ org.eclipse.jdt.debug ---
-[INFO] Source directory: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/eval added.
-[INFO] 
-[INFO] --- resources:3.5.0:resources (default-resources) @ org.eclipse.jdt.debug ---
-[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/src/main/resources
-[INFO] 
-[INFO] --- tycho-compiler:5.0.4:compile (default-compile) @ org.eclipse.jdt.debug ---
-[INFO] Compiling 363 source files to /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/target/classes using Eclipse Compiler for Java(TM) 3.46.200.v20260902-0648
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/eval/org/eclipse/jdt/internal/debug/eval/LocalEvaluationEngine.java:[128] 
-	* XXX: constants should be 'default' or 'final'. Where are these constants
-	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-XXX: constants should be 'default' or 'final'. Where are these constants
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/eval/org/eclipse/jdt/internal/debug/eval/RemoteEvaluatorBuilder.java:[892] 
-	/* TODO: Make tricks here when we access fields where we have non-public access */
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: Make tricks here when we access fields where we have non-public access
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/eval/org/eclipse/jdt/internal/debug/eval/RemoteEvaluatorBuilder.java:[1526] 
-	// TODO: Fix this to use same method as visit(FieldAccess)
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: Fix this to use same method as visit(FieldAccess)
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/eval/org/eclipse/jdt/internal/debug/eval/ast/engine/Interpreter.java:[197] 
-	// XXX: exception
-	   ^^^^^^^^^^^^^^
-XXX: exception
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/jdi/org/eclipse/jdi/internal/MethodImpl.java:[915] 
-	// TODO: remove this test when j9 solve its problem
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: remove this test when j9 solve its problem
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/jdi/org/eclipse/jdi/internal/ReferenceTypeImpl.java:[1751] 
-	// TODO: remove the workaround when the J9SC20030415 bug is fixed (see
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: remove the workaround when the J9SC20030415 bug is fixed (see
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/jdi/org/eclipse/jdi/internal/VirtualMachineImpl.java:[1412] 
-	// TODO: how to inform the user that the VM doesn't manage
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: how to inform the user that the VM doesn't manage
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/jdi/org/eclipse/jdi/internal/connect/SocketListeningConnectorImpl.java:[67] 
-	// FIXME: connectionLimit is not actually used in this class, but in the higher-level controller, SocketListenConnector.
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-FIXME: connectionLimit is not actually used in this class, but in the higher-level controller, SocketListenConnector.
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/JavaDebugUtils.java:[151] 
-	// TODO: this may break fix to bug 21518
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: this may break fix to bug 21518
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/ConditionalBreakpointHandler.java:[262] 
-	// TODO: timeout?
-	   ^^^^^^^^^^^^^^
-TODO: timeout?
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/JavaClassPrepareBreakpoint.java:[131] 
-	// TODO: do we show anything for types already loaded?
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: do we show anything for types already loaded?
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/JavaExceptionBreakpoint.java:[787] 
-	* TODO: make API in future release.
-	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: make API in future release.
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIDebugTarget.java:[136] 
-	* TODO investigate making this a synchronized collection, to remove all this copying
-	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO investigate making this a synchronized collection, to remove all this copying
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIDebugTarget.java:[489] 
-	//TODO investigate making fThreads be a synchronized collection, to remove all this copying
-	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO investigate making fThreads be a synchronized collection, to remove all this copying
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIStackFrame.java:[198] 
-	// TODO: what about receiving type being the same?
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: what about receiving type being the same?
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIStackFrame.java:[1579] 
-	((IJavaThread) getThread()).stepWithFilters();
-	                            ^^^^^^^^^^^^^^^
-The method stepWithFilters() from the type IFilteredStep is deprecated
-16 problems (null, 16 warnings)
-[INFO] 
-[INFO] --- tycho-bnd:5.0.4:process (default-process) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-ds:5.0.4:declarative-services (default-declarative-services) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-apitools:5.0.4:generate (generate) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- resources:3.5.0:testResources (default-testResources) @ org.eclipse.jdt.debug ---
-[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/src/test/resources
-[INFO] 
-[INFO] --- tycho-compiler:5.0.4:testCompile (default-testCompile) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:update-consumer-pom (default-update-consumer-pom) @ org.eclipse.jdt.debug ---
-[INFO] 
-[INFO] --- tycho-source:5.0.4:plugin-source (plugin-source) @ org.eclipse.jdt.debug ---
-[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/target/org.eclipse.jdt.debug-3.26.100-SNAPSHOT-sources.jar
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:package-plugin (default-package-plugin) @ org.eclipse.jdt.debug ---
-[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/jdimodel.jar
-[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/target/org.eclipse.jdt.debug-3.26.100-SNAPSHOT.jar
-[INFO] 
-[INFO] --- tycho-p2-plugin:5.0.4:p2-metadata-default (default-p2-metadata-default) @ org.eclipse.jdt.debug ---
-[INFO] MavenProject: org.eclipse.jdt:org.eclipse.jdt.debug:3.26.100-SNAPSHOT @ /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug/.polyglot.META-INF
-    The main artifact has been replaced with the baseline version.
-    The following attached artifacts have been replaced with the baseline version: [sources]
-
-[INFO] 
-[INFO] --- tycho-p2-extras:5.0.4:compare-version-with-baselines (compare-attached-artifacts-with-release) @ org.eclipse.jdt.debug ---
-[INFO] Execution was skipped
-[INFO] 
-[INFO] -------------< org.eclipse.jdt:org.eclipse.jdt.launching >--------------
-[INFO] Building org.eclipse.jdt.launching 3.24.400-SNAPSHOT               [3/5]
-[INFO]   from org.eclipse.jdt.launching/pom.xml
-[INFO] ---------------------------[ eclipse-plugin ]---------------------------
-[INFO] 
-[INFO] --- clean:3.5.0:clean (default-clean) @ org.eclipse.jdt.launching ---
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:build-qualifier (default-build-qualifier) @ org.eclipse.jdt.launching ---
-[INFO] The project's OSGi version is 3.24.400.v20260902-1318
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:validate-id (default-validate-id) @ org.eclipse.jdt.launching ---
-[INFO] 
-[INFO] --- tycho-packaging:5.0.4:validate-version (default-validate-version) @ org.eclipse.jdt.launching ---
-[INFO] 
-[INFO] --- target-platform-configuration:5.0.4:target-platform (default-target-platform) @ org.eclipse.jdt.launching ---
-[INFO] 
-[INFO] --- tycho-compiler:5.0.4:validate-classpath (default-validate-classpath) @ org.eclipse.jdt.launching ---
-[INFO] Resolving class path of org.eclipse.jdt.launching
-[INFO] 
-[INFO] --- resources:3.5.0:resources (default-resources) @ org.eclipse.jdt.launching ---
-[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/src/main/resources
-[INFO] 
-[INFO] --- tycho-compiler:5.0.4:compile (default-compile) @ org.eclipse.jdt.launching ---
-[INFO] Compiling 132 source files to /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/target/classes using Eclipse Compiler for Java(TM) 3.46.200.v20260902-0648
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/JavaFxLibraryResolver.java:[58] 
-	* TODO: We don't know if JavaSE-9 will ship JavaFX in the ext folder as well. If yes, then we have to use something like
-	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: We don't know if JavaSE-9 will ship JavaFX in the ext folder as well. If yes, then we have to use something like
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/StandardVMDebugger.java:[578] 
-	// XXX: Revisit - allows us to put a quote (") around the classpath
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-XXX: Revisit - allows us to put a quote (") around the classpath
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/StandardVMRunner.java:[348] 
-	// XXX JDKs Javadoc specifies:
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-XXX JDKs Javadoc specifies:
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/StandardVMType.java:[448] 
-	// TODO: Bug 489207: Temporary workaround for Jigsaw-previews that don't declare a bootpath.
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: Bug 489207: Temporary workaround for Jigsaw-previews that don't declare a bootpath.
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/environments/EnvironmentsManager.java:[315] 
-	// TODO: progress reporting?
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: progress reporting?
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/environments/EnvironmentsManager.java:[447] 
-	// TODO: progress reporting?
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: progress reporting?
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/environments/ExecutionEnvironment.java:[444] 
-	// TODO: use safe runnable
-	   ^^^^^^^^^^^^^^^^^^^^^^^
-TODO: use safe runnable
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/environments/ExecutionEnvironmentAnalyzer.java:[42] 
-	// XXX: Note that this string is not yet standardized by OSGi, see http://wiki.osgi.org/wiki/Execution_Environment
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-XXX: Note that this string is not yet standardized by OSGi, see http://wiki.osgi.org/wiki/Execution_Environment
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/sourcelookup/advanced/AdvancedSourceLookupSupport.java:[38] 
-	// TODO consider moving to LaunchingPlugin
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO consider moving to LaunchingPlugin
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/sourcelookup/advanced/AdvancedSourceLookupSupport.java:[41] 
-	// TODO consider moving to LaunchingPlugin
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO consider moving to LaunchingPlugin
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/sourcelookup/advanced/JDIHelpers.java:[156] 
-	// TODO consider ignoring DebugException for all IJDIHeloper methods
+XXX not yet supported
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/JDIDebugUIPlugin.java:[646] 
+	dialog.setElements(packageList.toArray()); // XXX inefficient
+	                                              ^^^^^^^^^^^^^^^
+XXX inefficient
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/JDIModelPresentation.java:[1671] 
+	//TODO remove the cast once the API freeze has thawed
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO remove the cast once the API freeze has thawed
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/JDISourceViewer.java:[341] 
+	// XXX: Alternatively, we could apply TextLayout. Pros would be full
 	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO consider ignoring DebugException for all IJDIHeloper methods
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/sourcelookup/advanced/WorkspaceProjectSourceContainers.java:[87] 
-	// TODO review, this looks too complicated to add/remove java projects
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO review, this looks too complicated to add/remove java projects
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/sourcelookup/advanced/WorkspaceProjectSourceContainers.java:[149] 
-	// TODO decide what happens if the same location is associated with multiple package fragment roots
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO decide what happens if the same location is associated with multiple package fragment roots
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/internal/launching/sourcelookup/advanced/WorkspaceProjectSourceContainers.java:[314] 
-	// TODO this can take significant time for large workspaces, consider running on multiple threads
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO this can take significant time for large workspaces, consider running on multiple threads
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate.java:[367] 
-	// TODO: this test does not tell us if the bootpath entries are different (could still be
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: this test does not tell us if the bootpath entries are different (could still be
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/launching/AbstractJavaLaunchConfigurationDelegate.java:[1198] 
-	// TODO: revisit to examine other possible solutions
-	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: revisit to examine other possible solutions
-[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/launching/org/eclipse/jdt/launching/environments/ExecutionEnvironmentDescription.java:[316] 
-	value = resolveHome(value, eeHome); // TODO: remove once getProperties() has been removed
-	                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TODO: remove once getProperties() has been removed
-17 problems (null, 17 warnings)
+XXX: Alternatively, we could apply TextLayout. Pros would be full
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/JavaWordFinder.java:[60] 
+	* XXX: Here we should create the code point and test whether it is a Java
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XXX: Here we should create the code point and test whether it is a Java
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/actions/DisplayAction.java:[121] 
+	* TODO: illegal internal reference to IInternalDebugUIConstants
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: illegal internal reference to IInternalDebugUIConstants
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/actions/OpenFromClipboardAction.java:[624] 
+	* TODO: Because of faster performance SearchEngine.searchAllTypeNames(...) is used to do the
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: Because of faster performance SearchEngine.searchAllTypeNames(...) is used to do the
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/actions/OpenFromClipboardAction.java:[664] 
+	* TODO: Because of faster performance, if the type name is available
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: Because of faster performance, if the type name is available
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/actions/ToggleBreakpointAdapter.java:[1896] 
+	TemplateContextType contextType = JavaPlugin.getDefault().getTemplateContextRegistry().getContextType(JavaContextType.ID_STATEMENTS);
+	                                                                                       ^^^^^^^^^^^^^^
+The method getContextType(String) from the type ContextTypeRegistry is deprecated
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/actions/ToggleBreakpointAdapter.java:[1926] 
+	CompilationUnitContextType cuContextType = (CompilationUnitContextType) JavaPlugin.getDefault().getTemplateContextRegistry().getContextType(template.getContextTypeId());
+	                                                                                                                             ^^^^^^^^^^^^^^
+The method getContextType(String) from the type ContextTypeRegistry is deprecated
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/contentassist/JavaDebugContentAssistProcessor.java:[61] 
+	TemplateContextType contextType= JavaPlugin.getDefault().getTemplateContextRegistry().getContextType(JavaContextType.ID_ALL);
+	                                                                                      ^^^^^^^^^^^^^^
+The method getContextType(String) from the type ContextTypeRegistry is deprecated
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/contentassist/JavaDebugContentAssistProcessor.java:[65] 
+	contextType = JavaPlugin.getDefault().getTemplateContextRegistry().getContextType(JavaContextType.ID_STATEMENTS);
+	                                                                   ^^^^^^^^^^^^^^
+The method getContextType(String) from the type ContextTypeRegistry is deprecated
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/display/DisplayView.java:[315] 
+	//TODO: Still using "old" resource access
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: Still using "old" resource access
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/jres/ExecutionEnvironmentsPreferencePage.java:[156] 
+	// TODO: fix help
+	   ^^^^^^^^^^^^^^
+TODO: fix help
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/launcher/AbstractJavaMainTab.java:[209] 
+	//CONTEXTLAUNCHING
+	  ^^^^^^^^^^^^^^^^
+CONTEXTLAUNCHING
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/launcher/RuntimeClasspathEntryLabelProvider.java:[86] 
+	//TODO: check for invalid paths and change image
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: check for invalid paths and change image
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/monitors/JavaContendedMonitor.java:[122] 
+	//CONTEXTLAUNCHING
+	  ^^^^^^^^^^^^^^^^
+CONTEXTLAUNCHING
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/monitors/JavaOwnedMonitor.java:[137] 
+	//CONTEXTLAUNCHING
+	  ^^^^^^^^^^^^^^^^
+CONTEXTLAUNCHING
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/monitors/JavaOwningThread.java:[122] 
+	//CONTEXTLAUNCHING
+	  ^^^^^^^^^^^^^^^^
+CONTEXTLAUNCHING
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/monitors/JavaWaitingThread.java:[117] 
+	//CONTEXTLAUNCHING
+	  ^^^^^^^^^^^^^^^^
+CONTEXTLAUNCHING
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/ui/org/eclipse/jdt/internal/debug/ui/snippeteditor/JavaSnippetCompletionProcessor.java:[56] 
+	TemplateContextType contextType= JavaPlugin.getDefault().getTemplateContextRegistry().getContextType("java"); //$NON-NLS-1$
+	                                                                                      ^^^^^^^^^^^^^^
+The method getContextType(String) from the type ContextTypeRegistry is deprecated
+24 problems (null, 24 warnings)
 [INFO] 
-[INFO] --- antrun:3.2.0:run (compile-internal-jar) @ org.eclipse.jdt.launching ---
-[INFO] Executing tasks
-[INFO] Executed tasks
+[INFO] --- tycho-bnd:5.0.4:process (default-process) @ org.eclipse.jdt.debug.ui ---
 [INFO] 
-[INFO] --- tycho-bnd:5.0.4:process (default-process) @ org.eclipse.jdt.launching ---
+[INFO] --- tycho-ds:5.0.4:declarative-services (default-declarative-services) @ org.eclipse.jdt.debug.ui ---
 [INFO] 
-[INFO] --- tycho-ds:5.0.4:declarative-services (default-declarative-services) @ org.eclipse.jdt.launching ---
+[INFO] --- tycho-apitools:5.0.4:generate (generate) @ org.eclipse.jdt.debug.ui ---
 [INFO] 
-[INFO] --- tycho-apitools:5.0.4:generate (generate) @ org.eclipse.jdt.launching ---
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ org.eclipse.jdt.debug.ui ---
+[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/src/test/resources
 [INFO] 
-[INFO] --- resources:3.5.0:testResources (default-testResources) @ org.eclipse.jdt.launching ---
-[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/src/test/resources
+[INFO] --- tycho-compiler:5.0.4:testCompile (default-testCompile) @ org.eclipse.jdt.debug.ui ---
 [INFO] 
-[INFO] --- tycho-compiler:5.0.4:testCompile (default-testCompile) @ org.eclipse.jdt.launching ---
+[INFO] --- tycho-packaging:5.0.4:update-consumer-pom (default-update-consumer-pom) @ org.eclipse.jdt.debug.ui ---
 [INFO] 
-[INFO] --- tycho-packaging:5.0.4:update-consumer-pom (default-update-consumer-pom) @ org.eclipse.jdt.launching ---
+[INFO] --- tycho-source:5.0.4:plugin-source (plugin-source) @ org.eclipse.jdt.debug.ui ---
+[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/target/org.eclipse.jdt.debug.ui-3.15.600-SNAPSHOT-sources.jar
 [INFO] 
-[INFO] --- tycho-source:5.0.4:plugin-source (plugin-source) @ org.eclipse.jdt.launching ---
-[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/target/org.eclipse.jdt.launching-3.24.400-SNAPSHOT-sources.jar
+[INFO] --- tycho-packaging:5.0.4:package-plugin (default-package-plugin) @ org.eclipse.jdt.debug.ui ---
+[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/target/org.eclipse.jdt.debug.ui-3.15.600-SNAPSHOT.jar
 [INFO] 
-[INFO] --- tycho-packaging:5.0.4:package-plugin (default-package-plugin) @ org.eclipse.jdt.launching ---
-[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/target/org.eclipse.jdt.launching-3.24.400-SNAPSHOT.jar
-[INFO] 
-[INFO] --- tycho-p2-plugin:5.0.4:p2-metadata-default (default-p2-metadata-default) @ org.eclipse.jdt.launching ---
-[INFO] MavenProject: org.eclipse.jdt:org.eclipse.jdt.launching:3.24.400-SNAPSHOT @ /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.launching/pom.xml
+[INFO] --- tycho-p2-plugin:5.0.4:p2-metadata-default (default-p2-metadata-default) @ org.eclipse.jdt.debug.ui ---
+[INFO] MavenProject: org.eclipse.jdt:org.eclipse.jdt.debug.ui:3.15.600-SNAPSHOT @ /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/pom.xml
     The main artifact has been replaced with the baseline version.
     The following attached artifacts have been replaced with the baseline version: [sources]
 
 [INFO] 
-[INFO] --- tycho-p2-extras:5.0.4:compare-version-with-baselines (compare-attached-artifacts-with-release) @ org.eclipse.jdt.launching ---
+[INFO] --- tycho-p2-extras:5.0.4:compare-version-with-baselines (compare-attached-artifacts-with-release) @ org.eclipse.jdt.debug.ui ---
 [INFO] Execution was skipped
 [INFO] 
-[INFO] --------------< org.eclipse.jdt:org.eclipse.jdt.debug.ui >--------------
-[INFO] Building org.eclipse.jdt.debug.ui 3.15.600-SNAPSHOT                [4/5]
-[INFO]   from org.eclipse.jdt.debug.ui/pom.xml
-[INFO] ---------------------------[ eclipse-plugin ]---------------------------
+[INFO] ------------< org.eclipse.jdt:org.eclipse.jdt.debug.tests >-------------
+[INFO] Building org.eclipse.jdt.debug.tests 3.12.1000-SNAPSHOT            [5/5]
+[INFO]   from org.eclipse.jdt.debug.tests/pom.xml
+[INFO] ------------------------[ eclipse-test-plugin ]-------------------------
 [INFO] 
-[INFO] --- clean:3.5.0:clean (default-clean) @ org.eclipse.jdt.debug.ui ---
+[INFO] --- clean:3.5.0:clean (default-clean) @ org.eclipse.jdt.debug.tests ---
 [INFO] 
-[INFO] --- tycho-packaging:5.0.4:build-qualifier (default-build-qualifier) @ org.eclipse.jdt.debug.ui ---
-[INFO] The project's OSGi version is 3.15.600.v20260830-1408
+[INFO] --- tycho-packaging:5.0.4:build-qualifier (default-build-qualifier) @ org.eclipse.jdt.debug.tests ---
+[INFO] The project's OSGi version is 3.12.1000.v20260830-1408
 [INFO] 
-[INFO] --- tycho-packaging:5.0.4:validate-id (default-validate-id) @ org.eclipse.jdt.debug.ui ---
+[INFO] --- tycho-packaging:5.0.4:validate-id (default-validate-id) @ org.eclipse.jdt.debug.tests ---
 [INFO] 
-[INFO] --- tycho-packaging:5.0.4:validate-version (default-validate-version) @ org.eclipse.jdt.debug.ui ---
+[INFO] --- tycho-packaging:5.0.4:validate-version (default-validate-version) @ org.eclipse.jdt.debug.tests ---
 [INFO] 
-[INFO] --- target-platform-configuration:5.0.4:target-platform (default-target-platform) @ org.eclipse.jdt.debug.ui ---
+[INFO] --- toolchains:3.3.0:toolchain (default) @ org.eclipse.jdt.debug.tests ---
+[INFO] Required toolchain: jdk [ id='JavaSE-26' ]
+[INFO] Found matching toolchain for type jdk: JDK[/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/26.0.2-101/x64]
 [INFO] 
-[INFO] --- tycho-compiler:5.0.4:validate-classpath (default-validate-classpath) @ org.eclipse.jdt.debug.ui ---
-[INFO] Resolving class path of org.eclipse.jdt.debug.ui
+[INFO] --- target-platform-configuration:5.0.4:target-platform (default-target-platform) @ org.eclipse.jdt.debug.tests ---
 [INFO] 
-[INFO] --- resources:3.5.0:resources (default-resources) @ org.eclipse.jdt.debug.ui ---
-[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.ui/src/main/resources
+[INFO] --- tycho-compiler:5.0.4:validate-classpath (default-validate-classpath) @ org.eclipse.jdt.debug.tests ---
+[INFO] Resolving class path of org.eclipse.jdt.debug.tests
 [INFO] 
-[INFO] --- tycho-compiler:5.0.4:compile (default-compile) @ org.eclipse.jdt.debug.ui ---
+[INFO] --- resources:3.5.0:resources (default-resources) @ org.eclipse.jdt.debug.tests ---
+[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/src/main/resources
 [INFO] 
-[INFO] ------------------------------------------------------------------------
-[INFO] Skipping org.eclipse.jdt.debug.tests
-[INFO] This project has been banned from the build due to previous failures.
-[INFO] ------------------------------------------------------------------------
+[INFO] --- tycho-compiler:5.0.4:compile (default-compile) @ org.eclipse.jdt.debug.tests ---
+[INFO] Compiling 360 source files to /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/classes using Eclipse Compiler for Java(TM) 3.46.200.v20260902-0648
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/AutomatedSuite.java:[308] 
+	//TODO: project rename
+	  ^^^^^^^^^^^^^^^^^^^^
+TODO: project rename
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/AutomatedSuite.java:[309] 
+	//TODO: package move
+	  ^^^^^^^^^^^^^^^^^^
+TODO: package move
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/ConditionalBreakpointsInJava8Tests.java:[122] 
+	* TODO: disabled until a fix is available
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: disabled until a fix is available
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/core/RuntimeClasspathEntryTests.java:[78] 
+	* XXX: test waiting for bug fix in JCORE - unable to bind container if there
+	  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+XXX: test waiting for bug fix in JCORE - unable to bind container if there
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/core/StratumTests.java:[52] 
+	// TODO ideally need to check "if NN or newer"
+	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO ideally need to check "if NN or newer"
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/core/VMInstallTests.java:[284] 
+	// Ignore this test. TODO: remove this once this is a JUnit-4 or later test that handles assumptions correctly
+	                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: remove this once this is a JUnit-4 or later test that handles assumptions correctly
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/refactoring/RenameInnerTypeUnitTests.java:[124] 
+	* @param type TODO
+	              ^^^^
+TODO
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/refactoring/RenameNonPublicTypeUnitTests.java:[128] 
+	* @param type TODO
+	              ^^^^
+TODO
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/refactoring/RenamePublicTypeUnitTests.java:[65] 
+	*            TODO
+	             ^^^^
+TODO
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/refactoring/RenamePublicTypeUnitTests.java:[153] 
+	* @param type TODO
+	              ^^^^
+TODO
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/ui/InstructionPointerManagerTests.java:[383] 
+	// TODO Selection of the other target does not occur automatically.  This functionality may change and will break this test.
+	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO Selection of the other target does not occur automatically.  This functionality may change and will break this test.
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/ui/OpenFromClipboardTests.java:[454] 
+	// TODO: This currently fails. see https://bugs.eclipse.org/bugs/show_bug.cgi?id=333948
+	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO: This currently fails. see https://bugs.eclipse.org/bugs/show_bug.cgi?id=333948
+[WARNING] /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/ui/presentation/TestIJavaVariable.java:[95] 
+	// TODO Auto-generated method stub
+	   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TODO Auto-generated method stub
+13 problems (null, 13 warnings)
+[INFO] 
+[INFO] --- tycho-ds:5.0.4:declarative-services (default-declarative-services) @ org.eclipse.jdt.debug.tests ---
+[INFO] 
+[INFO] --- tycho-apitools:5.0.4:generate (generate) @ org.eclipse.jdt.debug.tests ---
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ org.eclipse.jdt.debug.tests ---
+[INFO] skip non existing resourceDirectory /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/src/test/resources
+[INFO] 
+[INFO] --- tycho-packaging:5.0.4:update-consumer-pom (default-update-consumer-pom) @ org.eclipse.jdt.debug.tests ---
+[INFO] 
+[INFO] --- tycho-source:5.0.4:plugin-source (plugin-source) @ org.eclipse.jdt.debug.tests ---
+[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/org.eclipse.jdt.debug.tests-3.12.1000-SNAPSHOT-sources.jar
+[INFO] 
+[INFO] --- tycho-packaging:5.0.4:package-plugin (default-package-plugin) @ org.eclipse.jdt.debug.tests ---
+[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/javadebugtests.jar
+[INFO] Building jar: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/org.eclipse.jdt.debug.tests-3.12.1000-SNAPSHOT.jar
+[INFO] 
+[INFO] --- tycho-p2-plugin:5.0.4:p2-metadata-default (default-p2-metadata-default) @ org.eclipse.jdt.debug.tests ---
+[INFO] No baseline version org.eclipse.jdt:org.eclipse.jdt.debug.tests:eclipse-test-plugin:3.12.1000-SNAPSHOT
+[INFO] 
+[INFO] --- tycho-surefire:5.0.4:test (default-test) @ org.eclipse.jdt.debug.tests ---
+[INFO] Selected test framework junit (5.0.0) with provider junit5vintage [5.12.0,6.0.0)
+[INFO] Executing test runtime with timeout (seconds): 1200, logs, if any, will be placed at: /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/work/data/.metadata/.log
+[INFO] Command line: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/26.0.2-101/x64/bin/java -Dosgi.noShutdown=false -Dosgi.os=linux -Dosgi.ws=gtk -Dosgi.arch=x86_64 --add-modules=ALL-SYSTEM -Dosgi.clean=true -Declipse.test.screenshot_directory=/home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/screenshots -ea -jar /home/runner/.m2/repository/p2/osgi/bundle/org.eclipse.equinox.launcher/1.8.0.v20260804-1928/org.eclipse.equinox.launcher-1.8.0.v20260804-1928.jar -data /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/work/data -install /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/work -configuration /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/work/configuration -application org.eclipse.tycho.surefire.osgibooter.uitest -testproperties /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/surefire.properties -consoleLog -timeout 1200000
+WARNING: Using incubator modules: jdk.incubator.vector
+
+(java:2805): dbind-WARNING **: 13:05:44.153: AT-SPI: Error retrieving accessibility bus address: org.freedesktop.DBus.Error.ServiceUnknown: The name org.a11y.Bus was not provided by any .service files
+WARNING: Final field saveAndRestore in class org.eclipse.e4.ui.internal.workbench.ResourceHandler has been mutated reflectively by class org.eclipse.e4.core.internal.di.FieldRequestor in unnamed module @453d496b (file:/home/runner/.m2/repository/p2/osgi/bundle/org.eclipse.e4.core.di/1.9.1000.v20260831-1412/org.eclipse.e4.core.di-1.9.1000.v20260831-1412.jar)
+WARNING: Use --enable-final-field-mutation=ALL-UNNAMED to avoid a warning
+WARNING: Mutating final fields will be blocked in a future release unless final field mutation is enabled
+!SESSION 2026-09-04 13:05:37.738 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=26.0.2.1
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en
+Framework arguments:  -application org.eclipse.tycho.surefire.osgibooter.uitest -testproperties /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/surefire.properties -timeout 1200000
+Command-line arguments:  -data /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/work/data -application org.eclipse.tycho.surefire.osgibooter.uitest -testproperties /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/surefire.properties -consoleLog -timeout 1200000
+
+!ENTRY org.eclipse.e4.ui.css.swt.theme 2 0 2026-09-04 13:05:46.556
+!MESSAGE Theme 'org.eclipse.e4.ui.css.theme.e4_default' not found; falling back to default theme.
+
+!ENTRY org.eclipse.tycho.surefire.osgibooter 1 0 2026-09-04 13:05:50.620
+!MESSAGE starting DumpStackTracesTimer with timeout=1080000 at 2026-09-04 13:05:50 +0000
+Running org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests
+13:05:51.008 SETTING UP TESTS
+13:05:51.011 SETUP JavaBreakpointListenerTests.testRemovalWithoutMarker
+
+!ENTRY org.eclipse.jdt.debug 1 0 2026-09-04 13:05:51.510
+!MESSAGE VM added x64, location: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/26.0.2-101/x64
+13:05:56.040 TDOWN JavaBreakpointListenerTests.testRemovalWithoutMarker
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 5.132 s <<< FAILURE! -- in org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests
+org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests.testRemovalWithoutMarker -- Time elapsed: 5.118 s <<< ERROR!
+java.lang.NullPointerException: Cannot invoke "org.eclipse.core.resources.IMarker.exists()" because the return value of "org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.getMarker()" is null
+	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.deregisterRequest(JavaBreakpoint.java:289)
+	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.removeRequests(JavaBreakpoint.java:807)
+	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.removeFromTarget(JavaBreakpoint.java:748)
+	at org.eclipse.jdt.internal.debug.core.breakpoints.JavaLineBreakpoint.removeFromTarget(JavaLineBreakpoint.java:188)
+	at org.eclipse.jdt.internal.debug.core.model.JDIDebugTarget.breakpointRemoved(JDIDebugTarget.java:1634)
+	at org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests.testRemovalWithoutMarker(JavaBreakpointListenerTests.java:1243)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at junit.framework.TestCase.runTest(TestCase.java:177)
+	at junit.framework.TestCase.runBare(TestCase.java:142)
+	at org.eclipse.jdt.debug.tests.AbstractDebugTest.runBare(AbstractDebugTest.java:3004)
+	at junit.framework.TestResult$1.protect(TestResult.java:122)
+	at junit.framework.TestResult.runProtected(TestResult.java:142)
+	at junit.framework.TestResult.run(TestResult.java:125)
+	at junit.framework.TestCase.run(TestCase.java:130)
+	at junit.framework.TestSuite.runTest(TestSuite.java:241)
+	at junit.framework.TestSuite.run(TestSuite.java:236)
+
+
+Results:
+
+Errors: 
+  JavaBreakpointListenerTests>AbstractDebugTest.runBare:3004->testRemovalWithoutMarker:1243 » NullPointer Cannot invoke "org.eclipse.core.resources.IMarker.exists()" because the return value of "org.eclipse.jdt.internal.debug.core.breakpoints.JavaBreakpoint.getMarker()" is null
+
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+
+
+!ENTRY org.eclipse.core.resources 2 10035 2026-09-04 13:05:56.907
+!MESSAGE The workspace will exit with unsaved changes in this session.
 [INFO] ------------------------------------------------------------------------
 [INFO] Reactor Summary:
 [INFO] 
-[INFO] eclipse.jdt.debug 4.42.0-SNAPSHOT .................. SUCCESS [  0.461 s]
-[INFO] [bundle] JDI Debug Model 3.26.100-SNAPSHOT ......... SUCCESS [ 59.997 s]
-[INFO] org.eclipse.jdt.launching 3.24.400-SNAPSHOT ........ SUCCESS [  3.673 s]
-[INFO] org.eclipse.jdt.debug.ui 3.15.600-SNAPSHOT ......... FAILURE [ 13.966 s]
-[INFO] org.eclipse.jdt.debug.tests 3.12.1000-SNAPSHOT ..... SKIPPED
+[INFO] eclipse.jdt.debug 4.42.0-SNAPSHOT .................. SUCCESS [  0.597 s]
+[INFO] [bundle] JDI Debug Model 3.26.100-SNAPSHOT ......... SUCCESS [01:16 min]
+[INFO] org.eclipse.jdt.launching 3.24.400-SNAPSHOT ........ SUCCESS [  4.501 s]
+[INFO] org.eclipse.jdt.debug.ui 3.15.600-SNAPSHOT ......... SUCCESS [ 16.750 s]
+[INFO] org.eclipse.jdt.debug.tests 3.12.1000-SNAPSHOT ..... FAILURE [ 39.528 s]
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD FAILURE
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  02:00 min
-[INFO] Finished at: 2026-09-04T13:01:19Z
+[INFO] Total time:  03:09 min
+[INFO] Finished at: 2026-09-04T13:05:57Z
 [INFO] ------------------------------------------------------------------------
-[ERROR] Failed to execute goal org.eclipse.tycho:tycho-compiler-plugin:5.0.4:compile (default-compile) on project org.eclipse.jdt.debug.ui: useJDK = BREE configured, but no toolchain of type 'jdk' with id 'JavaSE-21' found. See https://maven.apache.org/guides/mini/guide-using-toolchains.html -> [Help 1]
+[ERROR] Failed to execute goal org.eclipse.tycho:tycho-surefire-plugin:5.0.4:test (default-test) on project org.eclipse.jdt.debug.tests: There are test failures.
+[ERROR] 
+[ERROR] Please refer to /home/runner/work/eclipse.jdt.debug/eclipse.jdt.debug/org.eclipse.jdt.debug.tests/target/surefire-reports for the individual test results.
+[ERROR] -> [Help 1]
 [ERROR] 
 [ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
 [ERROR] Re-run Maven using the -X switch to enable full debug logging.
 [ERROR] 
 [ERROR] For more information about the errors and possible solutions, please read the following articles:
-[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
 [ERROR] 
 [ERROR] After correcting the problems, you can resume the build with the command
-[ERROR]   mvn <args> -rf :org.eclipse.jdt.debug.ui
+[ERROR]   mvn <args> -rf :org.eclipse.jdt.debug.tests
