@@ -1,0 +1,145 @@
+name: Reproduce and fix JDI startup deadline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/jenkins-parity-diagnostics]
+    paths: [.github/workflows/jdi-startup-regression.yml]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: carstenartur/eclipse.jdt.debug
+          ref: 6f7d2f7a2ff51651a2146360f5e9b29cad9f0319
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: carstenartur/eclipse.jdt.debug
+          ref: 3e00ec4b86ca1a93e61fa674ec78d61ef673b586
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: shared-toolchain
+          run-id: 33978370233
+          github-token: ${{ github.token }}
+          path: tool-archive
+      - name: Use the same pinned Java 26 and parent POM as the comparison
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tools" evidence
+          tar -xzf tool-archive/toolchain.tar.gz -C "$RUNNER_TEMP/tools"
+          bash harness/.github/ci/activate-tools.sh "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE"
+          cp "$RUNNER_TEMP/tools/toolchain.sha256" evidence/
+      - name: Reproduce the regression, apply the fix, and test again
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/focused-test.sh" <<'SH'
+          #!/usr/bin/env bash
+          set -uo pipefail
+          cd "$GITHUB_WORKSPACE/source"
+          mvn clean verify -B --fail-at-end -pl org.eclipse.jdt.debug.jdi.tests -am \
+            -Ptest-on-javase-26 -Pbree-libs \
+            -Dmaven.repo.local="$GITHUB_WORKSPACE/.m2/repository" \
+            -Dtest=org.eclipse.debug.jdi.tests.VMConnectionTimeoutTest \
+            -DfailIfNoTests=false -Dsurefire.failIfNoSpecifiedTests=false \
+            -Dmaven.test.failure.ignore=true -DtrimStackTrace=false
+          SH
+          cat > "$RUNNER_TEMP/check-report.py" <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+          import xml.etree.ElementTree as ET
+          phase = sys.argv[1]
+          reports = list(Path('evidence', phase).glob('TEST-*.xml'))
+          cases = [case for path in reports for case in ET.parse(path).getroot().iter('testcase')]
+          assert len(cases) == 1, f'{phase}: expected the single focused test, got {len(cases)}'
+          case = cases[0]
+          assert case.get('name') == 'testPeerThatDoesNotCompleteHandshakeCannotBlockStartup', case.attrib
+          assert case.find('skipped') is None, 'Regression test was skipped'
+          failed = list(case.findall('failure')) + list(case.findall('error'))
+          if phase == 'before':
+              assert len(failed) == 1, 'The unfixed implementation did not reproduce the failure'
+              assert 'The connector blocked past the startup deadline on a silent peer' in failed[0].get('message', ''), failed[0].attrib
+          else:
+              assert not failed, [f.attrib for f in failed]
+          summary = {'phase': phase, 'test': case.attrib, 'failures': [f.attrib for f in failed]}
+          Path('evidence', phase + '-result.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, indent=2))
+          PY
+          for phase in before after; do
+            if [[ "$phase" == after ]]; then
+              python3 - <<'PY'
+          from pathlib import Path
+          root = Path('source/org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests')
+          path = root / 'AbstractJDITest.java'
+          text = path.read_text()
+          replacements = [
+              ('import java.util.Vector;', 'import java.util.Vector;\nimport java.util.concurrent.TimeUnit;'),
+              ('import org.eclipse.jdi.Bootstrap;', 'import org.eclipse.jdi.Bootstrap;\nimport org.eclipse.jdi.TimeoutException;'),
+              ('// Contact the VM (try at least 10 times for 5 seconds)\n\t\tlong n0 = System.nanoTime();',
+               '// Bound each attach as well as the retry loop. A zero connector timeout\n\t\t// waits forever if a peer accepts the socket but does not complete JDWP.\n\t\tlong timeoutNanos = TimeUnit.SECONDS.toNanos(5);\n\t\tlong n0 = System.nanoTime();'),
+              ('\t\t\t\targs.get("hostname").setValue("localhost");\n\n\t\t\t\tfVM = connector.attach(args);',
+               '\t\t\t\targs.get("hostname").setValue("localhost");\n\t\t\t\tlong remainingMillis = Math.max(1, TimeUnit.NANOSECONDS.toMillis(timeoutNanos - (System.nanoTime() - n0)));\n\t\t\t\targs.get("timeout").setValue(Long.toString(remainingMillis));\n\n\t\t\t\tfVM = connector.attach(args);'),
+              ('\t\t\t} catch (IOException e) {\n\t\t\t\tlong n1 = System.nanoTime();\n\t\t\t\tif (i > 10 && n1 - n0 > 5_000_000_000L) {',
+               '\t\t\t} catch (IOException | TimeoutException e) {\n\t\t\t\tlong n1 = System.nanoTime();\n\t\t\t\tif (n1 - n0 >= timeoutNanos) {')]
+          for old, new in replacements:
+              assert text.count(old) == 1, 'Unexpected source: ' + old
+              text = text.replace(old, new)
+          path.write_text(text)
+          path = root / 'AutomatedSuite.java'
+          text = path.read_text()
+          anchor = '\t\taddTest(new TestSuite(AccessibleTest.class));'
+          assert text.count(anchor) == 1
+          path.write_text(text.replace(anchor, '\t\taddTest(new TestSuite(VMConnectionTimeoutTest.class));\n' + anchor))
+          PY
+            fi
+            mkdir -p "evidence/$phase"
+            set +e
+            timeout 12m bash "$RUNNER_TEMP/focused-test.sh" 2>&1 | tee "evidence/$phase-maven.log"
+            code=${PIPESTATUS[0]}
+            set -e
+            printf '%s\n' "$code" > "evidence/$phase-maven-exit.txt"
+            cp source/org.eclipse.jdt.debug.jdi.tests/target/surefire-reports/* "evidence/$phase/" || true
+            [[ "$code" == 0 ]] || exit "$code"
+            python3 "$RUNNER_TEMP/check-report.py" "$phase"
+          done
+          git -C source diff --check
+          git -C source diff > evidence/fix.patch
+      - name: Publish only after the unfixed failure and fixed pass are verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          [[ "$(git rev-parse HEAD)" == 3e00ec4b86ca1a93e61fa674ec78d61ef673b586 ]]
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git add org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests/AbstractJDITest.java \
+                  org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests/AutomatedSuite.java
+          git commit -s -m 'Bound JDI test attach attempts by the remaining startup deadline' \
+            -m 'The outer retry deadline cannot interrupt an attach using the default infinite timeout. Pass a positive remaining budget to the connector and report transport timeouts through the existing startup failure path.'
+          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=$header" push \
+            https://github.com/carstenartur/eclipse.jdt.debug.git HEAD:refs/heads/fix-jdi-test-attach-deadline
+          git rev-parse HEAD > ../evidence/published-commit.txt
+      - name: Preserve both original test results and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdi-startup-regression
+          path: evidence/
+          retention-days: 14
+          if-no-files-found: error
