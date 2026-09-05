@@ -89,12 +89,13 @@ final class TestProcessCleanup {
 		}
 	}
 
-private static IllegalStateException terminationFailure(Process process) {
-	String pid;
-	try {
-		pid = Long.toString(process.pid());
-	} catch (UnsupportedOperationException e) {
-		pid = "unavailable";
+	private static IllegalStateException terminationFailure(Process process) {
+		String pid;
+		try {
+			pid = Long.toString(process.pid());
+		} catch (UnsupportedOperationException e) {
+			pid = "unavailable";
+		}
+		return new IllegalStateException("Test process " + pid + " did not terminate after destroyForcibly()");
 	}
-	return new IllegalStateException("Test process " + pid + " did not terminate after destroyForcibly()");
 }
