@@ -202,51 +202,112 @@ def bounded_build(command, source, evidence, name, deadline):
 def analyze(source, project):
     reports = sorted(source.glob('**/target/surefire-reports/TEST-*.xml'))
     result = {'reports': len(reports), 'tests': 0, 'skipped': 0, 'failures': [],
-              'errors': [], 'modules': [], 'cases': []}
-    modules = set()
+              'errors': [], 'warnings': [], 'suite_counts': [], 'modules': [], 'cases': []}
+    modules, executed_modules = set(), set()
+    failure_tags = ('failure', 'error', 'flakyFailure', 'flakyError', 'rerunFailure', 'rerunError')
     for report in reports:
         relative = report.relative_to(source)
-        modules.add(relative.parts[0])
+        module = relative.parts[0]
+        modules.add(module)
         try:
             root = ET.parse(report).getroot()
             if root.tag not in ('testsuite', 'testsuites'):
                 raise ValueError('Not a JUnit test report')
+            # Inspect each suite separately. Never add parent and child counters:
+            # their descendant testcase sets overlap.
+            for suite in root.iter():
+                if suite.tag not in ('testsuite', 'testsuites'):
+                    continue
+                cases = list(suite.iter('testcase'))
+                declared = {}
+                for key in ('tests', 'failures', 'errors', 'skipped', 'flakes'):
+                    value = suite.get(key)
+                    if value is not None:
+                        if not value.isascii() or not value.isdecimal():
+                            raise ValueError('Invalid non-negative integer counter ' + key + '=' + repr(value))
+                        declared[key] = int(value)
+                actual = {'tests': len(cases),
+                          'failures': sum(c.find('failure') is not None for c in cases),
+                          'errors': sum(c.find('error') is not None for c in cases),
+                          'skipped': sum(c.find('skipped') is not None for c in cases)}
+                label = str(relative) + ' [' + suite.get('name', suite.tag) + ']'
+                result['suite_counts'].append({'report': str(relative),
+                    'suite': suite.get('name', suite.tag), 'declared': declared, 'serialized': actual})
+                for key, count in actual.items():
+                    if key not in declared or declared[key] == count:
+                        continue
+                    message = label + ': ' + key + ' declared=' + str(declared[key]) + ', serialized=' + str(count)
+                    # JDT/Tycho suite headers can undercount serialized executions.
+                    # Keep this discrepancy visible, but count the actual cases.
+                    # A larger declared count still means potentially missing data.
+                    result['errors' if declared[key] > count else 'warnings'].append(message)
+                if declared.get('flakes', 0):
+                    result['errors'].append(label + ': flaky executions reported')
+                if any(suite.find(tag) is not None for tag in failure_tags):
+                    result['errors'].append(label + ': suite failure outside a testcase')
             cases = list(root.iter('testcase'))
-            if root.get('tests') is not None and int(root.get('tests')) != len(cases):
-                result['errors'].append(str(relative) + ': declared test count differs from serialized cases')
-            declared_failed = int(root.get('failures', '0')) + int(root.get('errors', '0'))
-            actual_failed = sum(len(c.findall('failure')) + len(c.findall('error')) for c in cases)
-            if declared_failed > actual_failed:
-                result['errors'].append(str(relative) + ': failure counters lack matching failure details')
             result['tests'] += len(cases)
             for case in cases:
                 key = case.get('classname', '') + '.' + case.get('name', '')
-                skipped = case.find('skipped') is not None
+                failures = [node for node in case if node.tag in failure_tags]
+                skipped = case.find('skipped') is not None and not failures
                 result['skipped'] += int(skipped)
-                failures = list(case.findall('failure')) + list(case.findall('error'))
-                result['cases'].append({'test': key, 'time': case.get('time'),
+                if not skipped:
+                    executed_modules.add(module)
+                result['cases'].append({'test': key, 'report': str(relative), 'time': case.get('time'),
                                         'status': 'failed' if failures else 'skipped' if skipped else 'passed'})
                 for failure in failures:
-                    result['failures'].append({'test': key, 'report': str(relative),
+                    result['failures'].append({'test': key, 'report': str(relative), 'kind': failure.tag,
                         'message': failure.get('message', ''), 'trace': failure.text or ''})
-            if not cases and (int(root.get('failures', '0')) or int(root.get('errors', '0'))):
-                result['errors'].append(str(relative) + ': suite error without test cases')
         except (OSError, ET.ParseError, ValueError) as error:
             result['errors'].append(str(relative) + ': ' + str(error))
     required = (['org.eclipse.jdt.debug.jdi.tests', 'org.eclipse.jdt.debug.tests']
                 if project == 'debug' else ['org.eclipse.jdt.core.tests.model', 'org.eclipse.jdt.core.tests.compiler'])
     result['modules'] = sorted(modules)
-    result['missing_test_modules'] = sorted(set(required) - modules)
-    result['passed'] = result['tests'] - result['skipped'] - sum(c['status'] == 'failed' for c in result['cases'])
+    result['executed_test_modules'] = sorted(executed_modules)
+    result['missing_test_modules'] = sorted(set(required) - executed_modules)
+    result['passed'] = sum(c['status'] == 'passed' for c in result['cases'])
     result['ok'] = (result['tests'] > result['skipped'] and not result['failures']
                     and not result['errors'] and not result['missing_test_modules'])
     return result
 
 
+def validate_build(result, codes, evidence, project):
+    result['build_exit_codes'] = codes
+    expected = 2 if project == 'core' else 1
+    if (not isinstance(codes, list) or len(codes) != expected
+            or any(type(code) is not int or code != 0 for code in codes)):
+        result['errors'].append('Build phases did not all complete successfully: ' + repr(codes))
+    for marker in ('TIMEOUT', 'HARNESS_ERROR'):
+        if (evidence / marker).exists():
+            result['errors'].append('Build evidence contains ' + marker)
+    result['ok'] = result['ok'] and not result['errors']
+
+
+def reanalyze(evidence, project):
+    """Re-read archived XML without changing raw evidence or running Maven."""
+    result = analyze(evidence / 'reports', project)
+    try:
+        raw = (evidence / 'result.json').read_bytes()
+        original = json.loads(raw)
+        source = json.loads((evidence / 'source.json').read_text())
+        if not isinstance(original, dict) or not isinstance(source, dict):
+            raise ValueError('Evidence metadata must be JSON objects')
+        if source.get('project') != project:
+            raise ValueError('Archived source project does not match requested project')
+        result['source'] = source
+        result['original_result_sha256'] = hashlib.sha256(raw).hexdigest()
+        validate_build(result, original.get('build_exit_codes'), evidence, project)
+    except (OSError, ValueError) as error:
+        result['errors'].append('Cannot validate archived build: ' + str(error))
+        result['ok'] = False
+    result['analyzer_sha256'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    return result
+
+
 def collect(source, evidence, project, codes):
     result = analyze(source, project)
-    result['build_exit_codes'] = codes
-    result['ok'] = result['ok'] and bool(codes) and all(code == 0 for code in codes)
+    validate_build(result, codes, evidence, project)
     write_json(evidence / 'result.json', result)
     # Copy only diagnostic products, never the checkout's Git credentials or settings.
     patterns = ('**/target/surefire-reports/*', '**/target/work/data/.metadata/*.log',
@@ -266,7 +327,7 @@ def collect(source, evidence, project, codes):
                 with path.open('rb') as stream:
                     inventory[key] = hashlib.file_digest(stream, 'sha256').hexdigest()
     write_json(evidence / 'external-dependency-hashes.json', inventory)
-    brief = {key: value for key, value in result.items() if key not in ('cases', 'failures')}
+    brief = {key: value for key, value in result.items() if key not in ('cases', 'failures', 'suite_counts')}
     print(json.dumps(brief, indent=2), flush=True)
     summary = os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:
@@ -355,7 +416,7 @@ def build(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['matrix', 'build'])
+    parser.add_argument('mode', choices=['matrix', 'build', 'reanalyze'])
     parser.add_argument('--project', choices=['core', 'debug'], required=True)
     parser.add_argument('--diagnostics', action='store_true')
     parser.add_argument('--ref', default='HEAD')
@@ -366,6 +427,13 @@ def main():
     if args.mode == 'matrix':
         print(json.dumps({'include': matrix(args.project, args.diagnostics, args.ref)}))
         return 0
+    if args.mode == 'reanalyze':
+        evidence = Path(args.evidence).resolve()
+        result = reanalyze(evidence, args.project)
+        write_json(evidence / 'reanalyzed-result.json', result)
+        brief = {key: value for key, value in result.items() if key not in ('cases', 'suite_counts')}
+        print(json.dumps(brief, indent=2))
+        return 0 if result['ok'] else 1
     return 0 if build(args) else 1
 
 
