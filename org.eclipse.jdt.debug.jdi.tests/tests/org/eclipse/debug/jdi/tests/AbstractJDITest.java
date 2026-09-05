@@ -25,9 +25,11 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.StringTokenizer;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.debug.jdi.tests.program.MainClass;
 import org.eclipse.jdi.Bootstrap;
+import org.eclipse.jdi.TimeoutException;
 import org.eclipse.jdi.internal.VirtualMachineImpl;
 
 import com.sun.jdi.AbsentInformationException;
@@ -918,7 +920,10 @@ public abstract class AbstractJDITest extends TestCase {
 		startConsoleReaders();
 
 
-		// Contact the VM (try at least 10 times for 5 seconds)
+		// Bound each attach as well as the retry loop. A zero connector timeout
+		// waits forever if a peer accepts the socket but does not complete JDWP.
+		long timeoutNanos = TimeUnit.SECONDS.toNanos(5);
+		Throwable connectionFailure = null;
 		long n0 = System.nanoTime();
 		for (int i = 0; i < 10000; i++) {
 			if (Thread.currentThread().isInterrupted()) {
@@ -934,6 +939,8 @@ public abstract class AbstractJDITest extends TestCase {
 				Map<String, Argument> args = connector.defaultArguments();
 				args.get("port").setValue(String.valueOf(fBackEndPort));
 				args.get("hostname").setValue("localhost");
+				long remainingMillis = Math.max(1, TimeUnit.NANOSECONDS.toMillis(timeoutNanos - (System.nanoTime() - n0)));
+				args.get("timeout").setValue(Long.toString(remainingMillis));
 
 				fVM = connector.attach(args);
 				if (fVMTraceFlags != com.sun.jdi.VirtualMachine.TRACE_NONE) {
@@ -942,9 +949,10 @@ public abstract class AbstractJDITest extends TestCase {
 				break;
 			} catch (IllegalConnectorArgumentsException e) {
 				e.printStackTrace();
-			} catch (IOException e) {
+			} catch (IOException | TimeoutException e) {
+				connectionFailure = e;
 				long n1 = System.nanoTime();
-				if (i > 10 && n1 - n0 > 5_000_000_000L) {
+				if (n1 - n0 >= timeoutNanos) {
 					e.printStackTrace();
 					System.out.println("Could not contact the VM at localhost" + ":" + fBackEndPort + " after " + (n1 - n0) / 1_000_000L + "ms");
 					break;
@@ -975,11 +983,34 @@ public abstract class AbstractJDITest extends TestCase {
 				}
 
 			}
-			throw new Error("Could not contact the VM");
+			Error failure = new Error("Could not contact the VM", connectionFailure);
+			// Retain pre-cleanup state in the test failure even when console output
+			// from the target process is missing from the CI test report.
+			failure.addSuppressed(new IllegalStateException("JDI startup at localhost:" + fBackEndPort
+					+ "; target " + describeProcess(fLaunchedVM) + "; proxy " + describeProcess(fLaunchedProxy)
+					+ "; runtime=" + Runtime.version() + "; vendor=" + System.getProperty("java.vendor")));
+			throw failure;
 		}
 		long n1 = System.nanoTime(); // for example after ~ 110ms
 		System.out.println("Connected to localhost" + ":" + fBackEndPort + " after " + (n1 - n0) / 1_000_000L + "ms");
 		startEventReader();
+	}
+
+	private static String describeProcess(Process process) {
+		if (process == null) {
+			return "not started";
+		}
+		String pid;
+		try {
+			pid = Long.toString(process.pid());
+		} catch (UnsupportedOperationException e) {
+			pid = "unavailable";
+		}
+		try {
+			return "pid=" + pid + ", alive=false, exitCode=" + process.exitValue();
+		} catch (IllegalThreadStateException e) {
+			return "pid=" + pid + ", alive=true";
+		}
 	}
 	/**
 	 * Initializes the fields that are used by this test only.
