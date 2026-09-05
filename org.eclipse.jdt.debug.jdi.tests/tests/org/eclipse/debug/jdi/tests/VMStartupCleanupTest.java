@@ -152,7 +152,6 @@ public class VMStartupCleanupTest extends TestCase {
 		Fixture fixture = new Fixture();
 		FakeProcess first = new FakeProcess();
 		fixture.nextVM = first;
-		fixture.attachFailure = null;
 		fixture.attachFailure = new Error("first attach failed");
 		assertStartupFailure(fixture, fixture.attachFailure);
 		assertCleared(fixture);
