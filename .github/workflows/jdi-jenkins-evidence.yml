@@ -96,3 +96,202 @@ jobs:
           path: evidence/
           if-no-files-found: error
           retention-days: 14
+
+  handshake:
+    if: github.repository == 'carstenartur/eclipse.jdt.debug'
+    name: Reproduce silent JDWP handshake with unchanged PR transport
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2dfead1ad5674407e6d9d53026decfcc9d5fdf04
+          persist-credentials: false
+      - uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1
+        with:
+          maven-version: 3.9.9
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Add only a diagnostic test to the pinned checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          test "$(git rev-parse HEAD)" = 2dfead1ad5674407e6d9d53026decfcc9d5fdf04
+          file=org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests/SocketHandshakeTimeoutDiagnostic.java
+          test ! -e "$file"
+          cat > "$file" <<'JAVA'
+          package org.eclipse.debug.jdi.tests;
+
+          import java.io.IOException;
+          import java.net.InetAddress;
+          import java.net.ServerSocket;
+          import java.net.Socket;
+          import java.nio.charset.StandardCharsets;
+          import java.util.concurrent.CountDownLatch;
+          import java.util.concurrent.ExecutionException;
+          import java.util.concurrent.ExecutorService;
+          import java.util.concurrent.Executors;
+          import java.util.concurrent.Future;
+          import java.util.concurrent.TimeUnit;
+          import java.util.concurrent.TimeoutException;
+
+          import org.eclipse.jdi.internal.connect.SocketTransportService;
+
+          import com.sun.jdi.connect.spi.Connection;
+
+          import junit.framework.TestCase;
+
+          /** Diagnostic-only test; production and PR sources remain unchanged. */
+          public class SocketHandshakeTimeoutDiagnostic extends TestCase {
+              public void testZeroTimeoutStallsUntilPeerIsClosed() throws Exception {
+                  try (SilentPeer peer = new SilentPeer()) {
+                      ExecutorService executor = executor();
+                      Future<Connection> attempt = executor.submit(() ->
+                          new SocketTransportService().attach("127.0.0.1", peer.port(), 0, 0));
+                      try {
+                          assertTrue("The peer did not receive the JDWP handshake", peer.received.await(5, TimeUnit.SECONDS));
+                          try {
+                              attempt.get(500, TimeUnit.MILLISECONDS);
+                              fail("Silent peer unexpectedly completed the zero-timeout handshake");
+                          } catch (TimeoutException expected) {
+                              System.out.println("ZERO_TIMEOUT: still blocked after receiving JDWP-Handshake; releasing the peer explicitly");
+                          }
+                          peer.close();
+                          try {
+                              Connection connection = attempt.get(5, TimeUnit.SECONDS);
+                              if (connection != null) {
+                                  connection.close();
+                              }
+                              fail("Closing a silent peer must fail the handshake");
+                          } catch (ExecutionException expected) {
+                              assertTrue(expected.getCause().toString(), expected.getCause() instanceof IOException);
+                              System.out.println("ZERO_TIMEOUT_RELEASED: " + expected.getCause());
+                          }
+                      } finally {
+                          peer.close();
+                          executor.shutdownNow();
+                          assertTrue("Attach worker leaked", executor.awaitTermination(5, TimeUnit.SECONDS));
+                      }
+                  }
+              }
+
+              public void testFiniteAttachTimeoutAlsoBoundsSilentHandshake() throws Exception {
+                  try (SilentPeer peer = new SilentPeer()) {
+                      ExecutorService executor = executor();
+                      long started = System.nanoTime();
+                      Future<Connection> attempt = executor.submit(() ->
+                          new SocketTransportService().attach("127.0.0.1", peer.port(), 500, 0));
+                      try {
+                          assertTrue("The peer did not receive the JDWP handshake", peer.received.await(5, TimeUnit.SECONDS));
+                          try {
+                              Connection connection = attempt.get(5, TimeUnit.SECONDS);
+                              if (connection != null) {
+                                  connection.close();
+                              }
+                              fail("Silent peer unexpectedly completed the finite-timeout handshake");
+                          } catch (ExecutionException expected) {
+                              assertEquals("org.eclipse.jdi.TimeoutException", expected.getCause().getClass().getName());
+                              long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
+                              System.out.println("FINITE_TIMEOUT: " + elapsed + "ms; " + expected.getCause());
+                              assertTrue("Timeout returned too late: " + elapsed, elapsed < 5000);
+                          }
+                      } finally {
+                          peer.close();
+                          executor.shutdownNow();
+                          assertTrue("Attach worker leaked", executor.awaitTermination(5, TimeUnit.SECONDS));
+                      }
+                  }
+              }
+
+              private static ExecutorService executor() {
+                  return Executors.newSingleThreadExecutor(task -> {
+                      Thread thread = new Thread(task, "JDI diagnostic attach");
+                      thread.setDaemon(true);
+                      return thread;
+                  });
+              }
+
+              private static final class SilentPeer implements AutoCloseable {
+                  private final ServerSocket server = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
+                  private final CountDownLatch received = new CountDownLatch(1);
+                  private final CountDownLatch release = new CountDownLatch(1);
+                  private volatile Socket socket;
+                  private final Thread worker;
+
+                  SilentPeer() throws IOException {
+                      worker = new Thread(() -> {
+                          try (Socket accepted = server.accept()) {
+                              socket = accepted;
+                              accepted.setSoTimeout(5000);
+                              String handshake = new String(accepted.getInputStream().readNBytes(14), StandardCharsets.US_ASCII);
+                              if ("JDWP-Handshake".equals(handshake)) {
+                                  received.countDown();
+                                  release.await(10, TimeUnit.SECONDS);
+                              }
+                          } catch (IOException | InterruptedException exception) {
+                              if (release.getCount() != 0) {
+                                  exception.printStackTrace();
+                              }
+                          }
+                      }, "Silent JDWP peer");
+                      worker.setDaemon(true);
+                      worker.start();
+                  }
+
+                  int port() {
+                      return server.getLocalPort();
+                  }
+
+                  @Override
+                  public void close() throws IOException {
+                      release.countDown();
+                      server.close();
+                      Socket current = socket;
+                      if (current != null) {
+                          current.close();
+                      }
+                  }
+              }
+          }
+          JAVA
+          cp "$file" diagnostics/
+          git diff --exit-code
+      - name: Run real transport against a silent local JDWP peer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -Pbuild-individual-bundles \
+            -Dcompare-version-with-baselines.skip=true \
+            -DskipTests=false -Dmaven.test.skip=false -DfailIfNoTests=true \
+            -Dtest=org.eclipse.debug.jdi.tests.SocketHandshakeTimeoutDiagnostic \
+            -pl org.eclipse.jdt.debug,org.eclipse.jdt.debug.jdi.tests -am \
+            verify 2>&1 | tee diagnostics/handshake-probe.log
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import xml.etree.ElementTree as ET
+          reports = pathlib.Path('org.eclipse.jdt.debug.jdi.tests/target/surefire-reports').glob('TEST-*.xml')
+          cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
+          assert len(cases) == 2, f'Expected exactly 2 diagnostic tests, found {len(cases)}'
+          assert all(case.find('error') is None and case.find('failure') is None
+                     and case.find('skipped') is None for case in cases)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as stream:
+              stream.write('## Silent handshake probe: 2 tests passed\n\n'
+                           'The original transport remains blocked with timeout 0 until the peer is closed. '
+                           'A finite attach timeout also bounds the silent handshake. '
+                           'This demonstrates a timeout gap, not the cause of the Jenkins abort.\n')
+          PY
+      - name: Preserve handshake probe results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdi-silent-handshake-probe-${{ github.run_attempt }}
+          path: |
+            diagnostics/
+            org.eclipse.jdt.debug.jdi.tests/target/surefire-reports/
+          if-no-files-found: error
+          retention-days: 14
