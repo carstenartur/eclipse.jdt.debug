@@ -97,9 +97,18 @@ public class VMStartupCleanupTest extends TestCase {
 	}
 
 	public void testCleanupFailureDoesNotReplaceStartupFailure() {
+		assertCleanupFailureDoesNotReplaceStartupFailure(false);
+	}
+
+	public void testCleanupFailureWithoutPidDoesNotReplaceStartupFailure() {
+		assertCleanupFailureDoesNotReplaceStartupFailure(true);
+	}
+
+	private void assertCleanupFailureDoesNotReplaceStartupFailure(boolean pidUnavailable) {
 		Fixture fixture = new Fixture();
 		FakeProcess vm = new FakeProcess();
 		vm.refuseExit = true;
+		vm.pidUnavailable = pidUnavailable;
 		FakeProcess proxy = new FakeProcess();
 		fixture.nextVM = vm;
 		fixture.nextProxy = proxy;
@@ -109,6 +118,8 @@ public class VMStartupCleanupTest extends TestCase {
 
 		assertEquals(1, fixture.attachFailure.getSuppressed().length);
 		assertTrue(fixture.attachFailure.getSuppressed()[0] instanceof IllegalStateException);
+		assertEquals("Test process " + (pidUnavailable ? "unavailable" : "42")
+				+ " did not terminate after destroyForcibly()", fixture.attachFailure.getSuppressed()[0].getMessage());
 		assertFalse(proxy.isAlive());
 		assertSame(vm, fixture.fLaunchedVM);
 		vm.alive = false;
@@ -141,6 +152,7 @@ public class VMStartupCleanupTest extends TestCase {
 		Fixture fixture = new Fixture();
 		FakeProcess first = new FakeProcess();
 		fixture.nextVM = first;
+		fixture.attachFailure = null;
 		fixture.attachFailure = new Error("first attach failed");
 		assertStartupFailure(fixture, fixture.attachFailure);
 		assertCleared(fixture);
@@ -230,21 +242,54 @@ public class VMStartupCleanupTest extends TestCase {
 	}
 
 	public void testAllProcessesAreAttemptedAndFailuresPreserved() {
+		assertAllProcessesAreAttemptedAndFailuresPreserved(false);
+	}
+
+	public void testAllProcessesWithoutPidAreAttemptedAndFailuresPreserved() {
+		assertAllProcessesAreAttemptedAndFailuresPreserved(true);
+	}
+
+	private void assertAllProcessesAreAttemptedAndFailuresPreserved(boolean pidUnavailable) {
 		FakeProcess first = new FakeProcess();
 		FakeProcess second = new FakeProcess();
 		FakeProcess third = new FakeProcess();
 		first.refuseExit = true;
 		second.refuseExit = true;
+		first.pidUnavailable = pidUnavailable;
+		second.pidUnavailable = pidUnavailable;
 		try {
 			TestProcessCleanup.terminate(10000, first, second, third);
 			fail("Unterminated processes must be reported");
 		} catch (IllegalStateException failure) {
-			assertTrue(failure.getMessage().contains("42"));
+			String expectedMessage = "Test process " + (pidUnavailable ? "unavailable" : "42")
+					+ " did not terminate after destroyForcibly()";
+			assertEquals(expectedMessage, failure.getMessage());
 			assertEquals(1, failure.getSuppressed().length);
+			assertTrue(failure.getSuppressed()[0] instanceof IllegalStateException);
+			assertEquals(expectedMessage, failure.getSuppressed()[0].getMessage());
 		}
 		assertEquals(List.of("destroy", "wait", "force", "wait"), first.calls);
 		assertEquals(first.calls, second.calls);
 		assertFalse(third.isAlive());
+	}
+
+	public void testInterruptedTerminationFailureWithoutPidPreservesInterrupt() {
+		FakeProcess process = new FakeProcess();
+		process.pidUnavailable = true;
+		process.refuseExit = true;
+		process.interruptWait = true;
+		try {
+			try {
+				TestProcessCleanup.terminate(10000, process);
+				fail("Unterminated process must be reported even without a PID");
+			} catch (IllegalStateException failure) {
+				assertEquals("Test process unavailable did not terminate after destroyForcibly()", failure.getMessage());
+			}
+			assertEquals(List.of("destroy", "wait", "force", "wait"), process.calls);
+			assertTrue(Thread.currentThread().isInterrupted());
+		} finally {
+			Thread.interrupted();
+		}
 	}
 
 	public void testFailedStartupTerminatesRealJavaProcess() throws Exception {
@@ -371,6 +416,7 @@ public class VMStartupCleanupTest extends TestCase {
 		boolean forced;
 		boolean refuseExit;
 		boolean interruptWait;
+		boolean pidUnavailable;
 
 		@Override
 		public boolean isAlive() {
@@ -379,7 +425,7 @@ public class VMStartupCleanupTest extends TestCase {
 
 		@Override
 		public long pid() {
-			return 42;
+			return pidUnavailable ? super.pid() : 42;
 		}
 
 		@Override
