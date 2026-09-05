@@ -3,6 +3,7 @@ name: JDI startup diagnostics
 on:
   push:
     branches: [diagnostics/jdi-startup-992]
+    paths: [.github/workflows/jdi-startup-diagnostics.yml]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +12,7 @@ permissions:
 jobs:
   jdi:
     if: github.repository == 'carstenartur/eclipse.jdt.debug'
-    name: JDI / ${{ matrix.label }}
+    name: JDI / Temurin 26 EA 34 / ${{ matrix.label }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -20,8 +21,12 @@ jobs:
         include:
           - label: upstream-base
             sha: af15c262973bc93c130d33b993c5fd3195ae3ab5
+            expected: 256
+            cleanup: 0
           - label: pr-992
             sha: 2dfead1ad5674407e6d9d53026decfcc9d5fdf04
+            expected: 271
+            cleanup: 15
     steps:
       - name: Checkout exact tested commit
         uses: actions/checkout@v4
@@ -32,25 +37,63 @@ jobs:
         uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1 # v5
         with:
           maven-version: 3.9.9
-      - name: Set up JDK 21
+      - name: Set up JDK 21 for the bundle execution environment
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - name: Record test environment
+      - name: Install pinned Temurin 26 EA build 34 for Maven and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics "$RUNNER_TEMP/jdk26-ea34-download" "$RUNNER_TEMP/jdk26-ea34"
+          archive=OpenJDK26U-jdk_x64_linux_hotspot_26_34-ea.tar.gz
+          base=https://github.com/adoptium/temurin26-binaries/releases/download/jdk-26%2B34-ea-beta
+          cd "$RUNNER_TEMP/jdk26-ea34-download"
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 180 "$base/$archive" -o "$archive"
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 60 "$base/$archive.sha256.txt" -o "$archive.sha256.txt"
+          sha256sum --check "$archive.sha256.txt"
+          sha256sum "$archive" > "$GITHUB_WORKSPACE/diagnostics/jdk-sha256.txt"
+          tar -xzf "$archive" --strip-components=1 -C "$RUNNER_TEMP/jdk26-ea34"
+          export JDK21_HOME="$JAVA_HOME"
+          export JDK26_HOME="$RUNNER_TEMP/jdk26-ea34"
+          "$JDK26_HOME/bin/java" -version 2>&1 | tee "$GITHUB_WORKSPACE/diagnostics/jdk26-version.txt"
+          "$JDK26_HOME/bin/java" -XshowSettings:properties -version 2>&1 | grep -Eq 'java.specification.version = 26$'
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import xml.etree.ElementTree as ET
+          root = ET.Element('toolchains')
+          for version in ('21', '26'):
+              toolchain = ET.SubElement(root, 'toolchain')
+              ET.SubElement(toolchain, 'type').text = 'jdk'
+              provides = ET.SubElement(toolchain, 'provides')
+              ET.SubElement(provides, 'id').text = f'JavaSE-{version}'
+              ET.SubElement(provides, 'version').text = version
+              ET.SubElement(provides, 'vendor').text = 'temurin'
+              config = ET.SubElement(toolchain, 'configuration')
+              ET.SubElement(config, 'jdkHome').text = os.environ[f'JDK{version}_HOME']
+          path = pathlib.Path.home() / '.m2/toolchains.xml'
+          path.parent.mkdir(parents=True, exist_ok=True)
+          ET.indent(root)
+          ET.ElementTree(root).write(path, encoding='utf-8', xml_declaration=True)
+          PY
+          printf 'JAVA_HOME=%s\n' "$JDK26_HOME" >> "$GITHUB_ENV"
+          printf '%s/bin\n' "$JDK26_HOME" >> "$GITHUB_PATH"
+      - name: Record and verify test environment
         shell: bash
         env:
           EXPECTED_SHA: ${{ matrix.sha }}
         run: |
           set -euo pipefail
-          mkdir -p diagnostics
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           {
             git rev-parse HEAD
             uname -a
             java -version
             mvn -version
+            cat "$HOME/.m2/toolchains.xml"
             printf '\nHost name and localhost resolution:\n'
             hostname
             getent ahosts localhost || true
@@ -58,16 +101,20 @@ jobs:
             ss -ltnp || true
           } > diagnostics/environment.txt 2>&1
           cat diagnostics/environment.txt
-      - name: Run the complete JDI suite three times
+          java -XshowSettings:properties -version 2>&1 | grep -Eq 'java.specification.version = 26$'
+      - name: Run the complete JDI suite three times on Java 26
         shell: bash
         env:
           TESTED_LABEL: ${{ matrix.label }}
+          EXPECTED_TESTS: ${{ matrix.expected }}
+          EXPECTED_CLEANUP: ${{ matrix.cleanup }}
         run: |
           set -euo pipefail
           overall=0
           module=org.eclipse.jdt.debug.jdi.tests
-          printf '# JDI startup diagnostics: %s\n\n' "$TESTED_LABEL" >> "$GITHUB_STEP_SUMMARY"
+          printf '# JDI / Temurin 26 EA 34 / %s\n\n' "$TESTED_LABEL" >> "$GITHUB_STEP_SUMMARY"
           printf 'Exact tested commit: `%s`\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Same Java major/build as Jenkins; vendor and runner are not identical.\n\n' >> "$GITHUB_STEP_SUMMARY"
           monitor_pid=''
           stop_monitor() {
             if [[ -n "$monitor_pid" ]]; then
@@ -80,7 +127,6 @@ jobs:
           for attempt in 1 2 3; do
             out="diagnostics/attempt-$attempt"
             mkdir -p "$out"
-            # A fresh test workspace and reports prevent reuse of stale results.
             rm -rf "$module/target/work" "$module/target/surefire-reports"
             (
               while true; do
@@ -93,7 +139,7 @@ jobs:
             monitor_pid=$!
             set +e
             timeout --signal=TERM --kill-after=30s 18m \
-              mvn -B -ntp -Pbuild-individual-bundles \
+              mvn -B -ntp -Pbuild-individual-bundles,test-on-javase-26 \
                 -Dcompare-version-with-baselines.skip=true \
                 -DskipTests=false -Dmaven.test.skip=false \
                 -DfailIfNoTests=true \
@@ -105,9 +151,7 @@ jobs:
             stop_monitor
             printf '%s\n' "$rc" > "$out/maven-exit-code.txt"
             printf '## Attempt %s\n\nMaven exit code: `%s`\n\n' "$attempt" "$rc" >> "$GITHUB_STEP_SUMMARY"
-            if [[ "$rc" != 0 ]]; then
-              overall=1
-            fi
+            if [[ "$rc" != 0 ]]; then overall=1; fi
             if [[ -d "$module/target/surefire-reports" ]]; then
               cp -a "$module/target/surefire-reports" "$out/"
             fi
@@ -121,10 +165,10 @@ jobs:
           import pathlib
           import sys
           import xml.etree.ElementTree as ET
-
           out = pathlib.Path(sys.argv[1])
           reports = sorted((out / 'surefire-reports').glob('TEST-*.xml'))
-          cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
+          roots = [ET.parse(report) for report in reports]
+          cases = [case for root in roots for case in root.iter('testcase')]
           executed = [case for case in cases if case.find('skipped') is None]
           errors = sum(case.find('error') is not None for case in cases)
           failures = sum(case.find('failure') is not None for case in cases)
@@ -139,17 +183,21 @@ jobs:
           print(summary)
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as stream:
               stream.write(summary + '\n\n')
-          if not real_jdi:
-              sys.exit('No executed real JDI test cases found; this is not a successful test run.')
-          if os.environ['TESTED_LABEL'] == 'pr-992' and not cleanup:
-              sys.exit('PR #992 startup-cleanup regression tests were not executed.')
+          # Fixed source SHAs make the expected counts exact: partial suites must not pass.
+          if (len(executed) != int(os.environ['EXPECTED_TESTS']) or len(real_jdi) != 256
+                  or len(cleanup) != int(os.environ['EXPECTED_CLEANUP']) or len(executed) != len(cases)):
+              sys.exit('Incomplete or unexpectedly changed suite; not a successful comparison.')
+          log = (out / 'maven.log').read_text(encoding='utf-8', errors='replace')
+          if 'java.version=26' not in log or '/jdk26-ea34/bin/java' not in log:
+              sys.exit('No evidence that the forked Eclipse test JVM used the selected Java 26.')
+          if 'The requested profile "test-on-javase-26" could not be activated' in log:
+              sys.exit('The Jenkins Java 26 test profile was not activated.')
           if errors or failures:
               sys.exit(1)
           PY
             then
               overall=1
             fi
-            # Do not repeat dependency/build failures or an unbounded VM hang.
             if ! compgen -G "$out/surefire-reports/TEST-*.xml" > /dev/null || [[ "$rc" = 124 || "$rc" = 137 ]]; then
               break
             fi
@@ -159,8 +207,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jdi-startup-${{ matrix.label }}-${{ github.run_attempt }}
+          name: jdi-startup-java26-ea34-${{ matrix.label }}-${{ github.run_attempt }}
           path: diagnostics/
           include-hidden-files: true
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
