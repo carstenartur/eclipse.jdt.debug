@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2024 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -10,6 +10,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Carsten Hammer - cleanup after failed test VM startup
  *******************************************************************************/
 package org.eclipse.debug.jdi.tests;
 
@@ -562,7 +563,7 @@ public abstract class AbstractJDITest extends TestCase {
 	 * NOTE: This assumes that the VM can watch field access.
 	 */
 	protected AccessWatchpointRequest getStaticAccessWatchpointRequest() {
-		// Get the static field
+		// Get the field
 		Field field = getField("fString");
 
 		// Create an access watchpoint for this field
@@ -671,8 +672,13 @@ public abstract class AbstractJDITest extends TestCase {
 	 * Launches the target VM and connects to VM.
 	 */
 	protected void launchTargetAndConnectToVM() {
-		launchTarget();
-		connectToVM();
+		try {
+			launchTarget();
+			connectToVM();
+		} catch (RuntimeException | Error failure) {
+			cleanupAfterFailedStartup(failure);
+			throw failure;
+		}
 	}
 
 	protected boolean vmIsRunning() {
@@ -915,6 +921,9 @@ public abstract class AbstractJDITest extends TestCase {
 		// Contact the VM (try at least 10 times for 5 seconds)
 		long n0 = System.nanoTime();
 		for (int i = 0; i < 10000; i++) {
+			if (Thread.currentThread().isInterrupted()) {
+				throw new Error("Interrupted while connecting to the VM", new InterruptedException());
+			}
 			try {
 				VirtualMachineManager manager = Bootstrap.virtualMachineManager();
 				List<AttachingConnector> connectors = manager.attachingConnectors();
@@ -943,6 +952,8 @@ public abstract class AbstractJDITest extends TestCase {
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException interrupted) {
+					Thread.currentThread().interrupt();
+					throw new Error("Interrupted while connecting to the VM", interrupted);
 				}
 			}
 		}
@@ -963,8 +974,6 @@ public abstract class AbstractJDITest extends TestCase {
 				} catch (IOException e) {
 				}
 
-				// Shut it down
-				killVM();
 			}
 			throw new Error("Could not contact the VM");
 		}
@@ -1158,7 +1167,23 @@ public abstract class AbstractJDITest extends TestCase {
 	 */
 	protected void launchTargetAndStartProgram() {
 		launchTargetAndConnectToVM();
-		startProgram();
+		try {
+			startProgram();
+		} catch (RuntimeException | Error failure) {
+			cleanupAfterFailedStartup(failure);
+			throw failure;
+		}
+	}
+
+	private void cleanupAfterFailedStartup(Throwable failure) {
+		// JUnit does not call tearDown() when setUp() fails.
+		try {
+			shutDownTarget();
+		} catch (RuntimeException | Error cleanupFailure) {
+			if (cleanupFailure != failure) {
+				failure.addSuppressed(cleanupFailure);
+			}
+		}
 	}
 	/**
 	 * Init tests
@@ -1201,29 +1226,57 @@ public abstract class AbstractJDITest extends TestCase {
 	 * Shut down the target.
 	 */
 	public void shutDownTarget() {
-		stopReaders();
-		if (fVM != null) {
+		boolean hadTarget = fVM != null || fLaunchedVM != null || fLaunchedProxy != null;
+		Throwable failure = null;
+		try {
+			stopReaders();
+			if (fVM != null) {
+				try {
+					fVM.exit(0);
+				} catch (VMDisconnectedException e) {
+				}
+			}
+		} catch (RuntimeException | Error e) {
+			failure = e;
+			throw e;
+		} finally {
 			try {
-				fVM.exit(0);
-			} catch (VMDisconnectedException e) {
+				killVM();
+			} catch (RuntimeException | Error cleanupFailure) {
+				if (failure == null) {
+					throw cleanupFailure;
+				}
+				if (failure != cleanupFailure) {
+					failure.addSuppressed(cleanupFailure);
+				}
+			} finally {
+				fVM = null;
+				// Keep a handle to a process whose termination failed.
+				if (fLaunchedVM != null && !fLaunchedVM.isAlive()) {
+					fLaunchedVM = null;
+				}
+				if (fLaunchedProxy != null && !fLaunchedProxy.isAlive()) {
+					fLaunchedProxy = null;
+				}
+				fEventReader = null;
+				fConsoleReader = null;
+				fConsoleErrorReader = null;
+				fProxyReader = null;
+				fProxyErrorReader = null;
+				if (hadTarget) {
+					selectNextPort();
+				}
 			}
 		}
+	}
 
-		fVM = null;
-		fLaunchedVM = null;
-
-		// We want subsequent connections to use different ports, unless a
-		// VM exec sting is given.
+	private static void selectNextPort() {
+		// Preserve the port embedded in a user-supplied VM command.
 		if (fVmCmd == null) {
-			ServerSocket socket;
-			try {
-				socket = new ServerSocket(0);
-				int availablePort = socket.getLocalPort();
-				socket.close(); //Available but always initialized
-				fBackEndPort = availablePort;
+			try (ServerSocket socket = new ServerSocket(0)) {
+				fBackEndPort = socket.getLocalPort();
 			} catch (IOException e) {
-				fBackEndPort +=2;
-
+				fBackEndPort += 2;
 			}
 		}
 	}
@@ -1317,15 +1370,12 @@ public abstract class AbstractJDITest extends TestCase {
 	 * Stops the event reader.
 	 */
 	private void stopEventReader() {
-		fEventReader.stop();
+		if (fEventReader != null) {
+			fEventReader.stop();
+		}
 	}
 	protected void killVM() {
-		if (fLaunchedVM != null) {
-			fLaunchedVM.destroy();
-		}
-		if (fLaunchedProxy != null) {
-			fLaunchedProxy.destroy();
-		}
+		TestProcessCleanup.terminate(fLaunchedVM, fLaunchedProxy);
 	}
 	/**
 	 * Starts the target program.
