@@ -1,49 +1,53 @@
-name: "Fork Build"
-
+name: Fork Build (CodeQL)
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
   schedule:
     - cron: '20 9 * * 2'
-
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: read
       contents: read
       security-events: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'java' ]
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Set up Maven
-      uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1 # v5
-      with:
-        maven-version: 3.9.9
-    - name: Setup Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '21'
-
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-
-    - name: Build with Maven
-      run: mvn -B package -Pbuild-individual-bundles --file pom.xml
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      env:
-        CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths", 1]}}'
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install legacy JDK for the shared toolchain
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '8.0.482+8'
+      - name: Install the same Java 26 build 34 and Maven 3.9.11 as the full CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ci-support"
+          for script in prepare-tools.sh activate-tools.sh; do
+            curl --fail --location --retry 3 --max-time 60 "https://raw.githubusercontent.com/carstenartur/eclipse.jdt.debug/f37414a3c96111d32821162102bec1f447146427/.github/ci/$script" -o "$RUNNER_TEMP/ci-support/$script"
+          done
+          bash "$RUNNER_TEMP/ci-support/prepare-tools.sh" "$RUNNER_TEMP/tools" "$RUNNER_TEMP/tool-evidence"
+          bash "$RUNNER_TEMP/ci-support/activate-tools.sh" "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE/.."
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java
+      - name: Build for CodeQL (the separate Maven CI performs full verification)
+        run: mvn -B package -Pbuild-individual-bundles --file pom.xml
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        env:
+          CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"interpret-results":["--max-paths", 1]}}'
+      - name: Archive tool versions and checksums
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-tool-evidence
+          path: ${{ runner.temp }}/tool-evidence/
+          retention-days: 7
+          if-no-files-found: warn
