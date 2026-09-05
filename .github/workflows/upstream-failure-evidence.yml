@@ -1,0 +1,72 @@
+name: Original upstream failure evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/jenkins-parity-diagnostics]
+    paths: [.github/workflows/upstream-failure-evidence.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Read pinned upstream JDI test sources
+        uses: actions/checkout@v4
+        with:
+          repository: eclipse-jdt/eclipse.jdt.debug
+          ref: af15c262973bc93c130d33b993c5fd3195ae3ab5
+          path: upstream-debug
+          persist-credentials: false
+      - name: Fetch original Jenkins logs without credentials or build changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/jenkins evidence/sources
+          cp -a upstream-debug/org.eclipse.jdt.debug.jdi.tests evidence/sources/
+          cp -a upstream-debug/org.eclipse.jdt.debug/jdi evidence/sources/jdi-implementation
+          cp upstream-debug/Jenkinsfile evidence/sources/debug-Jenkinsfile
+          cp upstream-debug/org.eclipse.jdt.debug.jdi.tests/pom.xml evidence/sources/debug-jdi-pom.xml
+          python3 - <<'PY'
+          from concurrent.futures import ThreadPoolExecutor
+          import json
+          from pathlib import Path
+          import subprocess
+          jobs = [('debug-pr990-25', 'eclipse.jdt.debug-github', 'PR-990', 25),
+                  ('debug-pr992-1', 'eclipse.jdt.debug-github', 'PR-992', 1),
+                  ('debug-master-112', 'eclipse.jdt.debug-github', 'master', 112),
+                  ('core-pr5364-2', 'eclipse.jdt.core', 'PR-5364', 2),
+                  ('core-master-1173', 'eclipse.jdt.core', 'master', 1173)]
+          def fetch(job):
+              name, project, branch, build = job
+              base = f'https://ci.eclipse.org/jdt/job/{project}/job/{branch}/{build}/'
+              results = []
+              for label, suffix in [('console.log', 'consoleText'), ('build.json', 'api/json')]:
+                  path = Path('evidence/jenkins', name + '-' + label)
+                  command = ['curl', '--silent', '--show-error', '--location', '--fail',
+                             '--connect-timeout', '10', '--max-time', '60', '--max-filesize', '50000000',
+                             '--output', str(path), '--write-out', '%{http_code}', base + suffix]
+                  try:
+                      proc = subprocess.run(command, capture_output=True, text=True, timeout=65)
+                      result = {'url': base + suffix, 'file': str(path), 'exit': proc.returncode,
+                                'http_status': proc.stdout, 'error': proc.stderr}
+                  except subprocess.TimeoutExpired:
+                      result = {'url': base + suffix, 'file': str(path), 'exit': 124}
+                  results.append(result)
+              return results
+          with ThreadPoolExecutor(max_workers=5) as pool:
+              results = [item for group in pool.map(fetch, jobs) for item in group]
+          Path('evidence/fetch-results.json').write_text(json.dumps(results, indent=2) + '\n')
+          print(json.dumps(results, indent=2))
+          PY
+      - name: Preserve original logs and pinned source files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-upstream-failure-evidence
+          path: evidence/
+          retention-days: 14
+          if-no-files-found: error
