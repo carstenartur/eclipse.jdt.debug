@@ -17,6 +17,21 @@ grep -Fq 'java.runtime.version = 26-beta+34-ea' "$evidence/java26.txt"
 # setup-java supplies one pinned legacy VM. Copy it once for all matrix cells.
 cp -a "${JAVA_HOME:?setup-java must first install JDK 8}/." "$out/jdk8/"
 "$out/jdk8/bin/java" -version 2>&1 | tee "$evidence/java8.txt"
+# BREE compilation uses real libraries for each execution environment, not Java 26 aliases.
+for spec in '11 11.0.30 7' '17 17.0.18 8' '21 21.0.10 7'; do
+  read -r major version build <<< "$spec"
+  url="https://github.com/adoptium/temurin${major}-binaries/releases/download/jdk-${version}%2B${build}/OpenJDK${major}U-jdk_x64_linux_hotspot_${version}_${build}.tar.gz"
+  mkdir -p "$out/jdk$major"
+  curl --fail --location --retry 3 --max-time 240 "$url" -o "$out/jdk$major.tar.gz"
+  curl --fail --location --retry 3 --max-time 60 "$url.sha256.txt" -o "$evidence/jdk$major.sha256"
+  hash=$(awk '{print $1}' "$evidence/jdk$major.sha256")
+  [[ "$hash" =~ ^[a-fA-F0-9]{64}$ ]]
+  printf '%s  %s\n' "$hash" "$out/jdk$major.tar.gz" | sha256sum --check
+  tar -xzf "$out/jdk$major.tar.gz" -C "$out/jdk$major" --strip-components=1
+  rm "$out/jdk$major.tar.gz"
+  "$out/jdk$major/bin/java" -XshowSettings:properties -version 2>&1 | tee "$evidence/java$major.txt"
+  grep -Fq "java.runtime.version = $version+$build" "$evidence/java$major.txt"
+done
 url='https://archive.apache.org/dist/maven/maven-3/3.9.11/binaries/apache-maven-3.9.11-bin.tar.gz'
 curl --fail --location --retry 3 --max-time 120 "$url" -o "$out/maven.tar.gz"
 curl --fail --location --retry 3 --max-time 60 "$url.sha512" -o "$evidence/maven.sha512"
@@ -45,12 +60,13 @@ printf '%s\n' "$url" > "$evidence/parent-url.txt"
 cp "$out/eclipse-platform-parent/pom.xml" "$evidence/parent.pom"
 cat > "$evidence/remaining-differences.txt" <<'EOF'
 JDK: same OpenJDK feature/build 26+34, but Temurin instead of the Jenkins OpenJDK distribution.
+BREE library VMs: real Temurin 8, 11, 17 and 21 installations; exact patches are recorded, not claimed identical to Jenkins.
 Maven: pinned 3.9.11 (documented CBI latest); exact Jenkins executable could not be obtained.
 Runner: GitHub Ubuntu 24.04, not the Eclipse Kubernetes agent. Display: Xvfb instead of Xvnc.
 Parent POM and tool binaries are identical in all cells of this run.
 Other SNAPSHOT/p2 dependencies can move. Compare external-dependency-hashes.json before causal attribution.
 No test timeout, retry count, port or assertion is relaxed. Raw test failures remain failures.
 EOF
-(cd "$out"; find jdk26 jdk8 maven eclipse-platform-parent -type f -print0 | sort -z | xargs -0 sha256sum) > "$out/toolchain.sha256"
+(cd "$out"; find jdk26 jdk8 jdk11 jdk17 jdk21 maven eclipse-platform-parent -type f -print0 | sort -z | xargs -0 sha256sum) > "$out/toolchain.sha256"
 cp "$out/toolchain.sha256" "$evidence/toolchain.sha256"
 cp "$evidence/remaining-differences.txt" "$out/remaining-differences.txt"

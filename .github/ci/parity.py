@@ -91,7 +91,7 @@ def prepare_source(source, project, variant, evidence):
     if project == 'core' and variant in ('product-only', 'tests-only'):
         if before != CORE_BASE:
             raise RuntimeError('Selective variants must start at the pinned Core base')
-        call(['git', 'fetch', '--no-tags', '--depth=1', 'origin', CORE_HEAD], source)
+        call(['git', 'fetch', '--no-tags', 'origin', CORE_HEAD], source)
         paths = [PRODUCT] if variant == 'product-only' else CORE_TESTS
         patch = call(['git', 'diff', CORE_BASE, CORE_HEAD, '--', *paths], source)
         if not patch:
@@ -262,7 +262,7 @@ def collect(source, evidence, project, codes):
     for path in repo.rglob('*'):
         if path.is_file() and path.suffix in ('.jar', '.pom', '.target'):
             key = str(path.relative_to(repo))
-            if '/99.99/' not in key:  # The deliberately bootstrapped local ECJ differs by variant.
+            if '/99.99/' not in key and not key.startswith('org/eclipse/jdt/org.eclipse.jdt.core.compiler.batch/'):
                 with path.open('rb') as stream:
                     inventory[key] = hashlib.file_digest(stream, 'sha256').hexdigest()
     write_json(evidence / 'external-dependency-hashes.json', inventory)
@@ -279,11 +279,40 @@ def collect(source, evidence, project, codes):
     return result['ok']
 
 
+def preflight(source, evidence):
+    """Reject setup errors before starting an expensive build or modifying source."""
+    shallow = call(['git', 'rev-parse', '--is-shallow-repository'], source).strip()
+    if shallow != 'false':
+        raise RuntimeError('Full Git history is required for Tycho/JGit bundle qualifiers')
+    toolchains = ET.parse(Path.home() / '.m2/toolchains.xml').getroot()
+    available = {node.findtext('./provides/id'): node.findtext('./configuration/jdkHome')
+                 for node in toolchains.findall('toolchain')}
+    required = set()
+    declarations = {}
+    # Only reactor bundle manifests, not intentionally broken test-workspace fixtures.
+    for manifest in source.glob('*/META-INF/MANIFEST.MF'):
+        text = manifest.read_text().replace('\r\n', '\n').replace('\n ', '')
+        for line in text.splitlines():
+            if line.startswith('Bundle-RequiredExecutionEnvironment:'):
+                environments = [v.strip() for v in line.split(':', 1)[1].split(',')]
+                declarations[str(manifest.relative_to(source))] = environments
+                required.update(environments)
+    missing = sorted(required - available.keys())
+    invalid = [name for name in required & available.keys()
+               if not available[name] or not Path(available[name], 'bin/java').is_file()]
+    write_json(evidence / 'toolchain-preflight.json', {
+        'shallow': shallow, 'manifest_environments': declarations,
+        'available_toolchains': available, 'missing': missing, 'invalid': invalid})
+    if missing or invalid:
+        raise RuntimeError('BREE toolchain setup incomplete: ' + str(missing + invalid))
+
+
 def build(args):
     source, evidence = Path(args.source).resolve(), Path(args.evidence).resolve()
     evidence.mkdir(parents=True, exist_ok=True)
     codes = []
     try:
+        preflight(source, evidence)
         prepare_source(source, args.project, args.variant, evidence)
         (evidence / 'environment.txt').write_text(call(['java', '-XshowSettings:properties', '-version'])
              + call(['mvn', '-version']) + call(['uname', '-a']) + Path('/etc/os-release').read_text())

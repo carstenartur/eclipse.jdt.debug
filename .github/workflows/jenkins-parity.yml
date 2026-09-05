@@ -108,6 +108,7 @@ jobs:
         with:
           ref: ${{ matrix.ref }}
           path: source
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:

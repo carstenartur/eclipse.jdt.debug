@@ -95,6 +95,44 @@ class EvidenceTests(unittest.TestCase):
         result = compare.compare(self.root, {'include': [{'variant': 'base', 'ref': parity.DEBUG_BASE}]})
         self.assertEqual(result['missing_variants'], ['base'])
 
+    def test_preflight_rejects_shallow_source_checkout(self):
+        with patch.object(parity, 'call', return_value='true\n'):
+            with self.assertRaisesRegex(RuntimeError, 'Full Git history'):
+                parity.preflight(self.root, self.root)
+
+    def test_preflight_detects_missing_bree_toolchain(self):
+        home = self.root / 'home'
+        (home / '.m2').mkdir(parents=True)
+        (home / '.m2/toolchains.xml').write_text('<toolchains/>')
+        manifest = self.root / 'bundle/META-INF/MANIFEST.MF'
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text('Bundle-RequiredExecutionEnvironment: JavaSE-17\n')
+        with patch.object(parity, 'call', return_value='false\n'), patch.object(Path, 'home', return_value=home):
+            with self.assertRaisesRegex(RuntimeError, 'JavaSE-17'):
+                parity.preflight(self.root, self.root)
+        self.assertEqual(json.loads((self.root / 'toolchain-preflight.json').read_text())['missing'], ['JavaSE-17'])
+
+    def test_preflight_accepts_actual_bree_installation(self):
+        home = self.root / 'home'
+        (home / '.m2').mkdir(parents=True)
+        java = self.root / 'jdk17/bin/java'
+        java.parent.mkdir(parents=True)
+        java.touch()
+        (home / '.m2/toolchains.xml').write_text('<toolchains><toolchain><provides><id>JavaSE-17</id></provides>'
+            '<configuration><jdkHome>' + str(java.parent.parent) + '</jdkHome></configuration></toolchain></toolchains>')
+        manifest = self.root / 'bundle/META-INF/MANIFEST.MF'
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text('Bundle-RequiredExecutionEnvironment: JavaSE-17\n')
+        with patch.object(parity, 'call', return_value='false\n'), patch.object(Path, 'home', return_value=home):
+            parity.preflight(self.root, self.root)
+
+    def test_settings_do_not_shadow_parent_p2_repository(self):
+        script = (Path(__file__).parent / 'activate-tools.sh').read_text()
+        self.assertNotIn('<id>eclipse</id>', script)
+        self.assertIn('<id>fork-eclipse-maven</id>', script)
+        for major in (11, 17, 21, 26):
+            self.assertIn('<id>JavaSE-' + str(major) + '</id>', script)
+
 
 if __name__ == '__main__':
     unittest.main()

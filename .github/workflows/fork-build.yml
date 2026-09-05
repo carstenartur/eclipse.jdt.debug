@@ -17,22 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: false
       - name: Install legacy JDK for the shared toolchain
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '8.0.482+8'
-      - name: Install the same Java 26 build 34 and Maven 3.9.11 as the full CI
+      - name: Install the same Java and Maven tools as the full CI
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/ci-support"
-          for script in prepare-tools.sh activate-tools.sh; do
-            curl --fail --location --retry 3 --max-time 60 "https://raw.githubusercontent.com/carstenartur/eclipse.jdt.debug/f37414a3c96111d32821162102bec1f447146427/.github/ci/$script" -o "$RUNNER_TEMP/ci-support/$script"
-          done
-          bash "$RUNNER_TEMP/ci-support/prepare-tools.sh" "$RUNNER_TEMP/tools" "$RUNNER_TEMP/tool-evidence"
-          bash "$RUNNER_TEMP/ci-support/activate-tools.sh" "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE/.."
+          bash .github/ci/prepare-tools.sh "$RUNNER_TEMP/tools" "$RUNNER_TEMP/tool-evidence"
+          bash .github/ci/activate-tools.sh "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE/.."
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
