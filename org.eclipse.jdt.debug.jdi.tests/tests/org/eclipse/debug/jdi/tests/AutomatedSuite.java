@@ -32,6 +32,7 @@ public class AutomatedSuite extends TestSuite {
 	public AutomatedSuite() {
 		AbstractJDITest.parseArgs(new String[] {});
 
+		addTest(new TestSuite(VMConnectionTimeoutTest.class));
 		addTest(new TestSuite(AccessibleTest.class));
 		addTest(new TestSuite(ArrayReferenceTest.class));
 		addTest(new TestSuite(ArrayTypeTest.class));
