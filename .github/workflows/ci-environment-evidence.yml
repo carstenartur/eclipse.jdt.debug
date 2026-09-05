@@ -1,55 +1,33 @@
 name: CI environment evidence
-
 on:
   workflow_dispatch:
   push:
     branches: [ci/jenkins-parity-diagnostics]
     paths: [.github/workflows/ci-environment-evidence.yml]
-
 permissions:
   contents: read
-
 jobs:
   collect:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Collect public Jenkins evidence
+      - name: Verify archived official OpenJDK
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence
-          for item in \
-            'debug-pr990 eclipse.jdt.debug-github PR-990 25' \
-            'debug-pr992 eclipse.jdt.debug-github PR-992 1' \
-            'debug-master eclipse.jdt.debug-github master 112' \
-            'core-pr5364 eclipse.jdt.core-Github PR-5364 2' \
-            'core-master eclipse.jdt.core-Github master 1173'; do
-            read -r name job branch build <<< "$item"
-            url="https://ci.eclipse.org/jdt/job/$job/job/$branch/$build/consoleText"
-            if curl --fail --location --retry 2 --connect-timeout 15 --max-time 90 "$url" -o "evidence/$name.log"; then
-              echo "## $name" | tee -a "$GITHUB_STEP_SUMMARY"
-              grep -E 'Apache Maven|Maven home|java version|openjdk version|JAVA_HOME=|maven/|maven-|Timeout has been exceeded|Cancelling nested steps|Finished:' "evidence/$name.log" | head -50 || true
-              tail -50 "evidence/$name.log"
-            else
-              printf 'Unavailable: %s\n' "$url" | tee "evidence/$name-unavailable.txt"
-            fi
-          done
-      - name: Verify pinned OpenJDK candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          url='https://download.java.net/java/early_access/jdk26/34/GPL/openjdk-26-ea+34_linux-x64_bin.tar.gz'
-          echo "$url" > evidence/jdk-url.txt
-          curl --fail --location --retry 2 --connect-timeout 15 --max-time 120 "$url.sha256" -o evidence/jdk.sha256
-          cat evidence/jdk.sha256
-          curl --fail --location --retry 2 --connect-timeout 15 --max-time 180 "$url" -o /tmp/jdk.tar.gz
-          hash=$(awk '{print $1}' evidence/jdk.sha256)
-          [[ "$hash" =~ ^[a-fA-F0-9]{64}$ ]]
-          printf '%s  %s\n' "$hash" /tmp/jdk.tar.gz | sha256sum --check
-          mkdir /tmp/pinned-jdk
-          tar -xzf /tmp/jdk.tar.gz -C /tmp/pinned-jdk --strip-components=1
+          image='openjdk:26-ea-34-jdk-slim-bookworm'
+          docker pull "$image" 2>&1 | tee evidence/docker-pull.txt
+          docker image inspect "$image" > evidence/docker-image.json
+          home=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$image" | sed -n 's/^JAVA_HOME=//p')
+          test -n "$home"
+          cid=$(docker create "$image")
+          trap 'docker rm "$cid" >/dev/null' EXIT
+          mkdir -p /tmp/pinned-jdk
+          docker cp "$cid:$home/." /tmp/pinned-jdk/
           /tmp/pinned-jdk/bin/java -XshowSettings:properties -version 2>&1 | tee evidence/java-version.txt
+          grep -Eq 'java.runtime.version = 26-ea\+34([[:space:]]|$)' evidence/java-version.txt
+          sha256sum /tmp/pinned-jdk/bin/java /tmp/pinned-jdk/lib/modules > evidence/jdk-files.sha256
       - name: Upload evidence even on failure
         if: always()
         uses: actions/upload-artifact@v4
