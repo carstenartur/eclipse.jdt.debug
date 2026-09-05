@@ -1,0 +1,166 @@
+name: JDI startup diagnostics
+
+on:
+  push:
+    branches: [diagnostics/jdi-startup-992]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jdi:
+    if: github.repository == 'carstenartur/eclipse.jdt.debug'
+    name: JDI / ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: upstream-base
+            sha: af15c262973bc93c130d33b993c5fd3195ae3ab5
+          - label: pr-992
+            sha: 2dfead1ad5674407e6d9d53026decfcc9d5fdf04
+    steps:
+      - name: Checkout exact tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.sha }}
+          persist-credentials: false
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@d6af6abeda15e98926a57b5aa970a96bb37f97d1 # v5
+        with:
+          maven-version: 3.9.9
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Record test environment
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          {
+            git rev-parse HEAD
+            uname -a
+            java -version
+            mvn -version
+            printf '\nHost name and localhost resolution:\n'
+            hostname
+            getent ahosts localhost || true
+            printf '\nListening TCP sockets:\n'
+            ss -ltnp || true
+          } > diagnostics/environment.txt 2>&1
+          cat diagnostics/environment.txt
+      - name: Run the complete JDI suite three times
+        shell: bash
+        env:
+          TESTED_LABEL: ${{ matrix.label }}
+        run: |
+          set -euo pipefail
+          overall=0
+          module=org.eclipse.jdt.debug.jdi.tests
+          printf '# JDI startup diagnostics: %s\n\n' "$TESTED_LABEL" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Exact tested commit: `%s`\n\n' "$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          monitor_pid=''
+          stop_monitor() {
+            if [[ -n "$monitor_pid" ]]; then
+              kill "$monitor_pid" 2>/dev/null || true
+              wait "$monitor_pid" 2>/dev/null || true
+              monitor_pid=''
+            fi
+          }
+          trap stop_monitor EXIT
+          for attempt in 1 2 3; do
+            out="diagnostics/attempt-$attempt"
+            mkdir -p "$out"
+            # A fresh test workspace and reports prevent reuse of stale results.
+            rm -rf "$module/target/work" "$module/target/surefire-reports"
+            (
+              while true; do
+                date -u '+%Y-%m-%dT%H:%M:%S.%NZ'
+                ps -C java -o pid,ppid,stat,etime,args || true
+                ss -ltnp || true
+                sleep 2
+              done
+            ) > "$out/processes-and-ports.log" 2>&1 &
+            monitor_pid=$!
+            set +e
+            timeout --signal=TERM --kill-after=30s 18m \
+              mvn -B -ntp -Pbuild-individual-bundles \
+                -Dcompare-version-with-baselines.skip=true \
+                -DskipTests=false -Dmaven.test.skip=false \
+                -DfailIfNoTests=true \
+                -Dtest=org.eclipse.debug.jdi.tests.AutomatedSuite \
+                -pl org.eclipse.jdt.debug,org.eclipse.jdt.debug.jdi.tests -am \
+                verify 2>&1 | tee "$out/maven.log"
+            rc=${PIPESTATUS[0]}
+            set -e
+            stop_monitor
+            printf '%s\n' "$rc" > "$out/maven-exit-code.txt"
+            printf '## Attempt %s\n\nMaven exit code: `%s`\n\n' "$attempt" "$rc" >> "$GITHUB_STEP_SUMMARY"
+            if [[ "$rc" != 0 ]]; then
+              overall=1
+            fi
+            if [[ -d "$module/target/surefire-reports" ]]; then
+              cp -a "$module/target/surefire-reports" "$out/"
+            fi
+            if [[ -d "$module/target" ]]; then
+              while IFS= read -r -d '' log; do
+                cp --parents "$log" "$out/"
+              done < <(find "$module/target" -type f \( -name '*.log' -o -name '.log' -o -name 'surefire.properties' \) -print0)
+            fi
+            if ! python3 - "$out" <<'PY'
+          import os
+          import pathlib
+          import sys
+          import xml.etree.ElementTree as ET
+
+          out = pathlib.Path(sys.argv[1])
+          reports = sorted((out / 'surefire-reports').glob('TEST-*.xml'))
+          cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
+          executed = [case for case in cases if case.find('skipped') is None]
+          errors = sum(case.find('error') is not None for case in cases)
+          failures = sum(case.find('failure') is not None for case in cases)
+          real_jdi = [case for case in executed
+                      if case.get('classname', '').startswith('org.eclipse.debug.jdi.tests.')
+                      and not case.get('classname', '').endswith('VMStartupCleanupTest')]
+          cleanup = [case for case in executed
+                     if case.get('classname', '').endswith('VMStartupCleanupTest')]
+          summary = (f'Test cases: {len(cases)}; executed: {len(executed)}; '
+                     f'errors: {errors}; failures: {failures}; '
+                     f'non-cleanup JDI cases: {len(real_jdi)}; cleanup cases: {len(cleanup)}.')
+          print(summary)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as stream:
+              stream.write(summary + '\n\n')
+          if not real_jdi:
+              sys.exit('No executed real JDI test cases found; this is not a successful test run.')
+          if os.environ['TESTED_LABEL'] == 'pr-992' and not cleanup:
+              sys.exit('PR #992 startup-cleanup regression tests were not executed.')
+          if errors or failures:
+              sys.exit(1)
+          PY
+            then
+              overall=1
+            fi
+            # Do not repeat dependency/build failures or an unbounded VM hang.
+            if ! compgen -G "$out/surefire-reports/TEST-*.xml" > /dev/null || [[ "$rc" = 124 || "$rc" = 137 ]]; then
+              break
+            fi
+          done
+          exit "$overall"
+      - name: Upload logs and XML reports even after failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdi-startup-${{ matrix.label }}-${{ github.run_attempt }}
+          path: diagnostics/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
