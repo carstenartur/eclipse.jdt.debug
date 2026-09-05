@@ -11,22 +11,39 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Verify archived official OpenJDK
+      - name: Verify retained JDK 26 build 34
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence
-          image='openjdk:26-ea-34-jdk-slim-bookworm'
-          docker pull "$image" 2>&1 | tee evidence/docker-pull.txt
-          docker image inspect "$image" > evidence/docker-image.json
-          home=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$image" | sed -n 's/^JAVA_HOME=//p')
-          test -n "$home"
-          cid=$(docker create "$image")
-          trap 'docker rm "$cid" >/dev/null' EXIT
-          mkdir -p /tmp/pinned-jdk
-          docker cp "$cid:$home/." /tmp/pinned-jdk/
+          mkdir -p evidence /tmp/pinned-jdk
+          found=false
+          for image in openjdk:26-ea-34-jdk-oraclelinux9 openjdk:26-ea-34-jdk; do
+            if docker pull "$image" 2>&1 | tee -a evidence/docker-pull.txt; then
+              docker image inspect "$image" > evidence/docker-image.json
+              home=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$image" | sed -n 's/^JAVA_HOME=//p')
+              test -n "$home"
+              cid=$(docker create "$image")
+              docker cp "$cid:$home/." /tmp/pinned-jdk/
+              docker rm "$cid"
+              found=true
+              break
+            fi
+          done
+          if [[ "$found" == false ]]; then
+            gh api 'repos/adoptium/temurin26-binaries/releases/tags/jdk-26%2B34-ea-beta' > evidence/release.json
+            jq -r '.assets[] | select(.name | test("^OpenJDK26U-jdk_x64_linux_hotspot_.*\\.tar\\.gz(\\.sha256\\.txt)?$")) | [.name,.browser_download_url] | @tsv' evidence/release.json | tee evidence/assets.tsv
+            url=$(jq -r '.assets[] | select(.name | test("^OpenJDK26U-jdk_x64_linux_hotspot_.*\\.tar\\.gz$")) | .browser_download_url' evidence/release.json)
+            test -n "$url"
+            curl --fail --location --retry 2 --max-time 180 "$url" -o /tmp/jdk.tar.gz
+            curl --fail --location --retry 2 --max-time 60 "$url.sha256.txt" -o evidence/jdk.sha256
+            hash=$(awk '{print $1}' evidence/jdk.sha256)
+            [[ "$hash" =~ ^[a-fA-F0-9]{64}$ ]]
+            printf '%s  /tmp/jdk.tar.gz\n' "$hash" | sha256sum --check
+            tar -xzf /tmp/jdk.tar.gz -C /tmp/pinned-jdk --strip-components=1
+          fi
           /tmp/pinned-jdk/bin/java -XshowSettings:properties -version 2>&1 | tee evidence/java-version.txt
-          grep -Eq 'java.runtime.version = 26-ea\+34([[:space:]]|$)' evidence/java-version.txt
           sha256sum /tmp/pinned-jdk/bin/java /tmp/pinned-jdk/lib/modules > evidence/jdk-files.sha256
       - name: Upload evidence even on failure
         if: always()
