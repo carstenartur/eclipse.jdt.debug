@@ -1,0 +1,131 @@
+name: Validate startup fix for PR 992 and breakpoint integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/jenkins-parity-diagnostics]
+    paths: [.github/workflows/jdi-cleanup-deadline.yml]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      tested_sha: ${{ steps.publish.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cd2782b2b8d35087301d56d2f53f57e144ee333d
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 2dfead1ad5674407e6d9d53026decfcc9d5fdf04
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: shared-toolchain
+          run-id: 33978370233
+          github-token: ${{ github.token }}
+          path: tool-archive
+      - uses: actions/download-artifact@v4
+        with:
+          name: evidence-pr992
+          run-id: 33978370233
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Activate the verified Java 26 toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tools" evidence
+          tar -xzf tool-archive/toolchain.tar.gz -C "$RUNNER_TEMP/tools"
+          bash harness/.github/ci/activate-tools.sh "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE"
+          cp "$RUNNER_TEMP/tools/toolchain.sha256" "$RUNNER_TEMP/tools/remaining-differences.txt" evidence/
+      - name: Reproduce both failures, test the fix and compare complete JDI coverage
+        run: python3 harness/.github/ci/validate-startup-cleanup.py
+      - name: Preserve the before and after evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-fix-evidence
+          path: evidence/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Publish the tested change to the existing PR branch
+        id: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd source
+          original=2dfead1ad5674407e6d9d53026decfcc9d5fdf04
+          live=$(git ls-remote origin refs/heads/fix-jdi-test-startup-cleanup | cut -f1)
+          [[ "$live" == "$original" ]] || { echo 'PR branch changed; refusing to publish'; exit 1; }
+          [[ "$(git rev-parse HEAD^)" == "$original" ]]
+          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=$header" push origin HEAD:refs/heads/fix-jdi-test-startup-cleanup
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  full:
+    needs: regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [infrastructure, with-pr990]
+    name: Full debug validation / ${{ matrix.variant }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cd2782b2b8d35087301d56d2f53f57e144ee333d
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.regression.outputs.tested_sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Add the unchanged breakpoint PR for integration validation only
+        if: matrix.variant == 'with-pr990'
+        run: |
+          set -euo pipefail
+          git -C source fetch --no-tags origin 17bf4ae2fa2388a83430a17662adab17be77a01e
+          git -C source show --format= --binary 17bf4ae2fa2388a83430a17662adab17be77a01e > "$RUNNER_TEMP/pr990.patch"
+          git -C source apply --check "$RUNNER_TEMP/pr990.patch"
+          git -C source apply "$RUNNER_TEMP/pr990.patch"
+      - uses: actions/download-artifact@v4
+        with:
+          name: shared-toolchain
+          run-id: 33978370233
+          github-token: ${{ github.token }}
+          path: tool-archive
+      - name: Activate identical tools and virtual display
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tools" evidence
+          tar -xzf tool-archive/toolchain.tar.gz -C "$RUNNER_TEMP/tools"
+          bash harness/.github/ci/activate-tools.sh "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE"
+          cp "$RUNNER_TEMP/tools/toolchain.sha256" "$RUNNER_TEMP/tools/remaining-differences.txt" evidence/
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgtk-3-0t64 libasound2t64
+      - name: Run the complete debug build and tests
+        run: python3 harness/.github/ci/parity.py build --project debug --variant current --source source --evidence evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: full-${{ matrix.variant }}
+          path: evidence/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
