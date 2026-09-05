@@ -1,0 +1,92 @@
+name: JDI Jenkins evidence
+
+on:
+  push:
+    branches: [diagnostics/jdi-startup-992]
+    paths: [.github/workflows/jdi-jenkins-evidence.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    if: github.repository == 'carstenartur/eclipse.jdt.debug'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Read public Jenkins PR-992 build 1 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          python3 - <<'PY'
+          import json
+          import pathlib
+          import re
+          import sys
+          import urllib.request
+
+          base = 'https://ci.eclipse.org/jdt/job/eclipse.jdt.debug-github/job/PR-992/1/'
+          out = pathlib.Path('evidence')
+          failed = []
+          for name, suffix in [('build.json', 'api/json'),
+                               ('tests.json', 'testReport/api/json'),
+                               ('console.txt', 'consoleText')]:
+              url = base + suffix
+              print(f'Fetching {url}', flush=True)
+              try:
+                  request = urllib.request.Request(url, headers={'User-Agent': 'JDT-CI-diagnostics'})
+                  with urllib.request.urlopen(request, timeout=90) as response:
+                      data = response.read(32 * 1024 * 1024 + 1)
+                  if len(data) > 32 * 1024 * 1024:
+                      raise ValueError('Response exceeds the 32 MiB evidence limit')
+                  (out / name).write_bytes(data)
+                  print(f'Saved {name}: {len(data)} bytes', flush=True)
+                  if name == 'build.json':
+                      build = json.loads(data)
+                      print(json.dumps({k: build.get(k) for k in
+                                        ['number', 'result', 'duration', 'timestamp', 'building', 'actions']},
+                                       indent=2))
+                  elif name == 'tests.json':
+                      report = json.loads(data)
+                      print('TEST TOTALS', json.dumps({k: report.get(k) for k in
+                                                     ['failCount', 'passCount', 'skipCount', 'duration']}))
+                      for suite in report.get('suites', []):
+                          for case in suite.get('cases', []):
+                              if case.get('status') in ('FAILED', 'REGRESSION'):
+                                  print('FAILED TEST', json.dumps(case, indent=2))
+                  else:
+                      lines = data.decode('utf-8', errors='replace').splitlines()
+                      chosen = set(range(min(160, len(lines))))
+                      chosen.update(range(max(0, len(lines) - 180), len(lines)))
+                      patterns = re.compile(r'Could not contact|Connection refused|Failed to connect|'
+                                            r'ERROR|FAILURE|Failures: [1-9]|Errors: [1-9]|'
+                                            r'Aborted|Timeout|timeout has been exceeded|Cancelling|'
+                                            r'java.version|Java version|Apache Maven|jdk26|'
+                                            r'Running org.eclipse.debug.jdi.tests|Tests run: 15')
+                      hits = [i for i, line in enumerate(lines) if patterns.search(line)]
+                      for i in hits[:100]:
+                          chosen.update(range(max(0, i - 5), min(len(lines), i + 24)))
+                      previous = -2
+                      for i in sorted(chosen):
+                          if i != previous + 1:
+                              print('...')
+                          print(f'{i + 1}: {lines[i]}')
+                          previous = i
+              except Exception as error:
+                  message = f'{url}: {type(error).__name__}: {error}'
+                  failed.append(message)
+                  print(message, file=sys.stderr, flush=True)
+          if failed:
+              (out / 'fetch-errors.txt').write_text('\n'.join(failed) + '\n', encoding='utf-8')
+              sys.exit(1)
+          PY
+      - name: Preserve original evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jdi-jenkins-pr-992-build-1-${{ github.run_attempt }}
+          path: evidence/
+          if-no-files-found: error
+          retention-days: 14
