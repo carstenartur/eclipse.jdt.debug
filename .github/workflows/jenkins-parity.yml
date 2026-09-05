@@ -62,7 +62,7 @@ jobs:
           mkdir -p tool-evidence
           printf '%s\n' "$value" > tool-evidence/matrix.json
       - name: Install pinned legacy JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '8.0.482+8'
