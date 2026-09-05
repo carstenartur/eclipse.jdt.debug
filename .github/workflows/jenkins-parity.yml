@@ -1,0 +1,164 @@
+name: Jenkins parity and controlled diagnosis
+
+on:
+  workflow_call:
+    inputs:
+      diagnostics:
+        type: boolean
+        default: false
+      harness_ref:
+        type: string
+        default: ''
+      source_ref:
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      diagnostics:
+        description: Compare pinned upstream base and PR variants
+        type: boolean
+        default: true
+      source_ref:
+        description: Ref for a regular build; ignored by the diagnostic matrix
+        type: string
+        default: ''
+  push:
+    branches: [ci/jenkins-parity-diagnostics]
+    paths: [.github/ci/**, .github/workflows/jenkins-parity.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+      project: ${{ steps.matrix.outputs.project }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: carstenartur/eclipse.jdt.debug
+          ref: ${{ inputs.harness_ref || github.sha }}
+          persist-credentials: false
+      - name: Validate harness
+        run: python3 -m unittest discover -s .github/ci -p 'test_*.py' -v
+      - name: Select pinned source variants
+        id: matrix
+        env:
+          REPOSITORY: ${{ github.repository }}
+          DIAGNOSTICS: ${{ inputs.diagnostics || github.ref == 'refs/heads/ci/jenkins-parity-diagnostics' }}
+          SOURCE_REF: ${{ inputs.source_ref || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          project="${REPOSITORY##*.}"
+          args=()
+          if [[ "$DIAGNOSTICS" == true ]]; then args+=(--diagnostics); fi
+          value=$(python3 .github/ci/parity.py matrix --project "$project" --ref "$SOURCE_REF" "${args[@]}")
+          echo "project=$project" >> "$GITHUB_OUTPUT"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+          mkdir -p tool-evidence
+          printf '%s\n' "$value" > tool-evidence/matrix.json
+      - name: Install pinned legacy JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '8.0.482+8'
+      - name: Prepare one verified toolchain and parent POM
+        run: bash .github/ci/prepare-tools.sh "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE/tool-evidence"
+      - name: Pack tools preserving permissions and symlinks
+        run: tar -czf "$RUNNER_TEMP/toolchain.tar.gz" -C "$RUNNER_TEMP/tools" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shared-toolchain
+          path: ${{ runner.temp }}/toolchain.tar.gz
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+      - name: Archive setup evidence even when setup fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tool-evidence
+          path: tool-evidence/
+          retention-days: 14
+          if-no-files-found: error
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    name: ${{ needs.prepare.outputs.project }} / ${{ matrix.variant }}
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          repository: carstenartur/eclipse.jdt.debug
+          ref: ${{ inputs.harness_ref || github.sha }}
+          path: harness
+          persist-credentials: false
+      - name: Checkout source under test
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          path: source
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: shared-toolchain
+          path: tool-archive
+      - name: Activate identical tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/tools" evidence
+          tar -xzf tool-archive/toolchain.tar.gz -C "$RUNNER_TEMP/tools"
+          bash harness/.github/ci/activate-tools.sh "$RUNNER_TEMP/tools" "$GITHUB_WORKSPACE"
+          cp "$RUNNER_TEMP/tools/toolchain.sha256" "$RUNNER_TEMP/tools/remaining-differences.txt" evidence/
+      - name: Install virtual display dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends xvfb xauth libgtk-3-0t64 libasound2t64
+      - name: Run Jenkins-equivalent build and collect evidence
+        env:
+          PROJECT: ${{ needs.prepare.outputs.project }}
+          VARIANT: ${{ matrix.variant }}
+        run: python3 harness/.github/ci/parity.py build --project "$PROJECT" --variant "$VARIANT" --source source --evidence evidence
+      - name: Upload raw evidence, including failures and timeouts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-${{ matrix.variant }}
+          path: evidence/
+          include-hidden-files: true
+          retention-days: 14
+          if-no-files-found: error
+
+  comparison:
+    if: always() && needs.prepare.result == 'success'
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: carstenartur/eclipse.jdt.debug
+          ref: ${{ inputs.harness_ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: evidence-*
+          path: comparison
+      - name: Compare failures and dependency drift
+        env:
+          EXPECTED_MATRIX: ${{ needs.prepare.outputs.matrix }}
+        run: python3 .github/ci/compare.py comparison
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comparison
+          path: comparison/comparison.json
+          retention-days: 14
+          if-no-files-found: error
