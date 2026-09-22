@@ -1,0 +1,28 @@
+name: Publish debugger template registry migration
+on:
+  push:
+    branches: [qa/publish-template-registry-20260922]
+    paths: [.github/workflows/publish-template-registry.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-template-registry-core-accessors
+          fetch-depth: 2
+      - name: Apply exact reviewed source diff to the dedicated branch
+        env:
+          SDK_COMPONENT: debug
+        run: |
+          set -euo pipefail
+          curl --retry 2 -fLsS 'https://raw.githubusercontent.com/carstenartur/eclipse.jdt.ui/07e6d93f270ebdbefbc6252d15d90fb9ccee9121/.github/scripts/publish-template-sdk.py' -o "$RUNNER_TEMP/publish.py"
+          python3 "$RUNNER_TEMP/publish.py"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-template-patches
+          path: ${{ runner.temp }}/publish-sdk/patches
