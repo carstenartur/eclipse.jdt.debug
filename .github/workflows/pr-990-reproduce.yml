@@ -9,7 +9,7 @@ jobs:
   reproduce:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -21,11 +21,11 @@ jobs:
           - name: full-stacked-27
             ref: 9ea93a87f617178d82a6fd61de7a9afa0ea98f5b
             test: AutomatedSuite
-            timeout: 600
+            timeout: 1200
           - name: full-upstream-27
             ref: 4e7cd73a7bac28514212c3402adab6610336d4b2
             test: AutomatedSuite
-            timeout: 600
+            timeout: 1200
     steps:
       - name: Install non-modular test JDK
         uses: actions/setup-java@v6
@@ -35,6 +35,18 @@ jobs:
           mvn-toolchain-id: JavaSE-1.8
       - name: Preserve Java 8 location
         run: echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME" >> "$GITHUB_ENV"
+      - name: Install bundle compilation toolchains
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
       - name: Install test runtime JDK
         uses: actions/setup-java@v6
         with:
@@ -105,7 +117,9 @@ jobs:
               (out/f'eclipse-{index}.log').write_text(text)
               print('ECLIPSE LOG', str(path), '\n'+text[-100000:], flush=True)
           for path in pathlib.Path('source').glob('**/surefire-reports/*.xml'):
-              print('TEST REPORT', str(path), path.read_text(errors='replace')[:1800], flush=True)
+              text = path.read_text(errors='replace')
+              (out/path.name).write_text(text)
+              print('TEST REPORT', str(path), text[:1800], flush=True)
           (out/'exit-code.txt').write_text(str(result))
           raise SystemExit(result)
           PY
