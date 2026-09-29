@@ -1,0 +1,78 @@
+name: PR 990 Jenkins evidence
+on:
+  push:
+    branches: [diagnostics/pr-990-ci-20260929]
+    paths: [.github/workflows/pr-990-jenkins-diagnostics.yml]
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Read public Jenkins logs and archived Eclipse logs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures
+          import json
+          import re
+          import urllib.request
+          import uuid
+          from pathlib import Path
+
+          root = 'https://ci.eclipse.org/jdt/job/eclipse.jdt.debug-github/job/'
+          builds = [('PR-990', 28), ('PR-990', 29), ('PR-990', 30), ('PR-992', 7), ('master', 121)]
+          output = Path('jenkins-evidence')
+          output.mkdir(exist_ok=True)
+
+          def fetch(url):
+              try:
+                  request = urllib.request.Request(url, headers={'User-Agent': 'JDT-CI-read-only-diagnostics'})
+                  with urllib.request.urlopen(request, timeout=45) as response:
+                      return response.status, response.read(20000000).decode('utf-8', errors='replace')
+              except Exception as exc:
+                  return 0, type(exc).__name__ + ': ' + str(exc)
+
+          def collect(build):
+              job, number = build
+              prefix = f'{job}-{number}'
+              base = root + job + '/' + str(number) + '/'
+              results = []
+              for label, suffix in [('api', 'api/json'), ('console', 'consoleText'), ('eclipse', 'artifact/org.eclipse.jdt.debug.tests/target/work/data/.metadata/.log')]:
+                  status, text = fetch(base + suffix)
+                  (output / (prefix + '-' + label + '.txt')).write_text(text)
+                  results.append((label, status, text))
+              return prefix, results
+
+          pattern = re.compile(r'(?i)(\[ERROR\]|timed? ?out|timeout|SIGTERM|143|killed|deadlock|thread dump|BreakpointRemoval|Running org\.eclipse\.jdt\.debug\.tests|Tests run:|Reactor Summary|JAVA_HOME|java version|Selected toolchain|could not|exception|AssertionFailedError|forked)')
+          token = uuid.uuid4().hex
+          print('::stop-commands::' + token, flush=True)
+          with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+              for prefix, results in pool.map(collect, builds):
+                  print('\n===== BUILD ' + prefix + ' =====', flush=True)
+                  for label, status, text in results:
+                      print(f'----- {label}: HTTP {status}; {len(text)} characters -----', flush=True)
+                      if status != 200:
+                          print(text[:1500])
+                          continue
+                      if label == 'api':
+                          data = json.loads(text)
+                          print(json.dumps({key: data.get(key) for key in ['number', 'result', 'timestamp', 'duration', 'builtOn', 'artifacts', 'actions']})[:24000])
+                      elif label == 'console':
+                          lines = text.splitlines()
+                          selected = set(range(min(60, len(lines)))) | set(range(max(0, len(lines)-100), len(lines)))
+                          for i, line in enumerate(lines):
+                              if pattern.search(line):
+                                  selected.update(range(max(0, i-5), min(len(lines), i+18)))
+                          prev = -2
+                          for i in sorted(selected):
+                              if i != prev + 1:
+                                  print('...')
+                              print(f'{i+1}: {lines[i]}')
+                              prev = i
+                      else:
+                          print(text[-220000:])
+                  print('===== END ' + prefix + ' =====', flush=True)
+          print('::' + token + '::', flush=True)
+          PY
