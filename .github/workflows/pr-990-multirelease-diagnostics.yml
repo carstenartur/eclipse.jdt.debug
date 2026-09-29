@@ -1,0 +1,101 @@
+name: PR 990 multi-release diagnosis
+on:
+  push:
+    branches: [diagnostics/pr-990-ci-20260929]
+    paths: [.github/workflows/pr-990-multirelease-diagnostics.yml]
+permissions:
+  contents: read
+jobs:
+  multirelease-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            11
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-11
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - name: Make required test runtimes discoverable
+        run: |
+          echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+          sudo mkdir -p /opt/tools/java/openjdk
+          sudo ln -s "$JAVA_HOME_11_X64" /opt/tools/java/openjdk/jdk-11
+          sudo ln -s "$JAVA_HOME_17_X64" /opt/tools/java/openjdk/jdk-17
+          sudo ln -s "$JAVA_HOME_21_X64" /opt/tools/java/openjdk/jdk-21
+          ls -l /opt/tools/java/openjdk/
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+      - name: Prepare exact source and diagnostic suite
+        run: |
+          git init source
+          git -C source remote add origin https://github.com/carstenartur/eclipse.jdt.debug.git
+          git -C source fetch --depth=1 origin 9ea93a87f617178d82a6fd61de7a9afa0ea98f5b
+          git -C source checkout --detach FETCH_HEAD
+          cat > source/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/MultiReleaseDiagnosticSuite.java <<'JAVA'
+          package org.eclipse.jdt.debug.tests;
+          import junit.framework.Test;
+          import junit.framework.TestSuite;
+          import org.eclipse.jdt.debug.tests.core.MultiReleaseLaunchTests;
+          public class MultiReleaseDiagnosticSuite extends DebugSuite {
+              public static Test suite() { return new MultiReleaseDiagnosticSuite(); }
+              public MultiReleaseDiagnosticSuite() { addTest(new TestSuite(MultiReleaseLaunchTests.class)); }
+          }
+          JAVA
+          git -C source status --short
+          java -version
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2t64
+      - name: Run remaining test and preserve thread snapshots
+        shell: bash
+        run: |
+          mkdir -p evidence
+          python3 - <<'PY'
+          import os, pathlib, subprocess, time, uuid
+          out=pathlib.Path('evidence').resolve()
+          command=['xvfb-run','-a','mvn','-B','-ntp','clean','verify','-pl','org.eclipse.jdt.debug.tests','-am','-Ptest-on-javase-27','-Pbree-libs','-Dtest=MultiReleaseDiagnosticSuite','-DfailIfNoTests=true','-Dsurefire.timeout=240','-Dmaven.test.failure.ignore=false','-DDetectVMInstallationsJob.disabled=true','-DtrimStackTrace=false']
+          token=uuid.uuid4().hex
+          print('::stop-commands::'+token,flush=True)
+          with (out/'maven.log').open('w') as log:
+              process=subprocess.Popen(command,cwd='source',stdout=log,stderr=subprocess.STDOUT)
+              count=0
+              while process.poll() is None:
+                  time.sleep(20);count+=1
+                  print('\n'.join((out/'maven.log').read_text(errors='replace').splitlines()[-10:]),flush=True)
+                  for line in subprocess.run(['ps','-eo','pid,args'],capture_output=True,text=True).stdout.splitlines():
+                      if 'org.eclipse.tycho.surefire.osgibooter.uitest' not in line or 'bin/java' not in line: continue
+                      pid=line.strip().split()[0]
+                      try:
+                          r=subprocess.run([os.environ['JAVA_HOME']+'/bin/jcmd',pid,'Thread.print','-l'],capture_output=True,text=True,timeout=10)
+                          (out/f'threads-{count}-{pid}.txt').write_text(r.stdout+r.stderr)
+                      except subprocess.TimeoutExpired: pass
+              code=process.returncode
+          print('MAVEN EXIT',code,flush=True)
+          print((out/'maven.log').read_text(errors='replace')[-100000:],flush=True)
+          for i,p in enumerate(pathlib.Path('source').glob('**/.metadata/.log')):
+              (out/f'eclipse-{i}.log').write_text(p.read_text(errors='replace'))
+          for p in pathlib.Path('source').glob('**/surefire-reports/*.xml'):
+              (out/p.name).write_bytes(p.read_bytes())
+          (out/'exit-code.txt').write_text(str(code))
+          print('::'+token+'::',flush=True)
+          raise SystemExit(code)
+          PY
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-multirelease-worker
+          path: evidence/
+          retention-days: 7
