@@ -1,0 +1,185 @@
+name: PR 990 hardening verification
+on:
+  push:
+    branches: [qa/pr-990-hardening-20261009]
+    paths: [.github/workflows/pr990-hardening-verify.yml]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      source: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: c8350ba1d2ca5950a65ab95cf62be1f98718f2a0
+      - name: Apply the minimal fixes to the test-first revision
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/JavaBreakpoint.java')
+          s=p.read_text(); a=s.index('\tprotected void removeRequests(final JDIDebugTarget target) throws CoreException {'); b=s.index('\n\t/**',a+5)
+          old=s[a:b]
+          new=old.replace('\t\tEventRequest req;','\t\tEventRequest req;\n\t\tCoreException failure = null;')
+          new=new.replace('\t\t\t\tderegisterRequest(req, target);','\t\t\t\ttry {\n\t\t\t\t\tderegisterRequest(req, target);\n\t\t\t\t} catch (CoreException e) {\n\t\t\t\t\t// A marker update failure must not leave the other VM requests active.\n\t\t\t\t\tif (failure == null) {\n\t\t\t\t\t\tfailure = e;\n\t\t\t\t\t} else if (failure != e) {\n\t\t\t\t\t\tfailure.addSuppressed(e);\n\t\t\t\t\t}\n\t\t\t\t}')
+          new=new.replace('\t\tfRequestsByTarget.remove(target);','\t\tfRequestsByTarget.remove(target);\n\t\tif (failure != null) {\n\t\t\tthrow failure;\n\t\t}')
+          assert new!=old and new.count('CoreException failure = null;')==1
+          p.write_text(s[:a]+new+s[b:])
+          p=Path('org.eclipse.jdt.debug.tests/test plugin/org/eclipse/jdt/debug/testplugin/GlobalBreakpointListener.java')
+          s=p.read_text().replace('2009, 2015','2009, 2026').replace('import java.util.LinkedHashSet;','import java.util.Collections;\nimport java.util.IdentityHashMap;\nimport java.util.LinkedHashSet;')
+          old='\tpublic static Set<IJavaBreakpoint> REMOVED = new LinkedHashSet<>();'
+          assert old in s
+          p.write_text(s.replace(old,'\t// Removed breakpoints may no longer have a marker backing equals/hashCode.\n\tpublic static Set<IJavaBreakpoint> REMOVED = Collections.synchronizedSet(Collections.newSetFromMap(new IdentityHashMap<>()));'))
+          p=Path('org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests/VMStartupCleanupTest.java')
+          s=p.read_text(); assert s.count('(proxy, method, args) ->')==1
+          p.write_text(s.replace('(proxy, method, args) ->','(_, method, _) ->'))
+          PY
+          git diff --check
+          git diff --stat
+      - name: Save the exact source-only candidate on an isolated QA ref
+        id: source
+        run: |
+          git config user.name 'Carsten Hammer'
+          git config user.email 'carsten.hammer@t-online.de'
+          git add org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/JavaBreakpoint.java 'org.eclipse.jdt.debug.tests/test plugin/org/eclipse/jdt/debug/testplugin/GlobalBreakpointListener.java' org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests/VMStartupCleanupTest.java
+          git commit -s -m 'Continue breakpoint request cleanup after deregistration failure' -m 'Keep the original CoreException, retain additional failures and remove all remaining requests before reporting it. Record markerless removals by identity in the test listener. Mark unused test lambda parameters explicitly.'
+          sha=$(git rev-parse HEAD)
+          git push origin "HEAD:refs/heads/qa/pr990-verified-$GITHUB_RUN_ID"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          mkdir -p evidence
+          git show --format=fuller --stat HEAD > evidence/candidate.txt
+          git rev-parse HEAD HEAD^{tree} > evidence/revision.txt
+          git ls-tree -r HEAD > evidence/tree.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr990-hardening-source
+          path: evidence/
+          retention-days: 14
+  tests:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [focused, without-target-finally, full]
+    name: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.source }}
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            11
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-11
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - name: Make test runtimes discoverable
+        run: |
+          echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+          sudo mkdir -p /opt/tools/java/openjdk
+          sudo ln -s "$JAVA_HOME_11_X64" /opt/tools/java/openjdk/jdk-11
+          sudo ln -s "$JAVA_HOME_17_X64" /opt/tools/java/openjdk/jdk-17
+          sudo ln -s "$JAVA_HOME_21_X64" /opt/tools/java/openjdk/jdk-21
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+          cache: maven
+      - name: Pin Maven and prepare display
+        run: |
+          url=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+          curl -fsSL --retry 2 "$url" -o "$RUNNER_TEMP/maven.tar.gz"
+          curl -fsSL --retry 2 "$url.sha512" -o "$RUNNER_TEMP/maven.sha512"
+          echo "$(cat "$RUNNER_TEMP/maven.sha512")  $RUNNER_TEMP/maven.tar.gz" | sha512sum -c -
+          tar xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2t64
+      - name: Prepare the focused tests or negative control
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          if [ "$MODE" = without-target-finally ]; then
+            git fetch --depth=1 origin 2df0ceb03e8756c89bf4b59a6b32f7941440cd90
+            git show 2df0ceb03e8756c89bf4b59a6b32f7941440cd90:org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIDebugTarget.java > org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIDebugTarget.java
+          fi
+          if [ "$MODE" != full ]; then
+            python3 - <<'PY'
+          import os
+          from pathlib import Path
+          test='addTest(new BreakpointRemovalTests("testCleanupContinuesAfterRequestDeregistrationFailure"));' if os.environ['MODE']=='without-target-finally' else 'addTest(new TestSuite(BreakpointRemovalTests.class)); addTest(new TestSuite(BreakpointListenerTests.class)); addTest(new TestSuite(JavaBreakpointListenerTests.class));'
+          Path('org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/BreakpointHardeningDiagnosticSuite.java').write_text('package org.eclipse.jdt.debug.tests;\nimport junit.framework.Test;\nimport junit.framework.TestSuite;\nimport org.eclipse.jdt.debug.tests.breakpoints.*;\npublic class BreakpointHardeningDiagnosticSuite extends DebugSuite {\n public static Test suite() { return new BreakpointHardeningDiagnosticSuite(); }\n public BreakpointHardeningDiagnosticSuite() { '+test+' }\n}\n')
+          PY
+          fi
+      - name: Execute and validate reports
+        env:
+          MODE: ${{ matrix.mode }}
+        shell: bash
+        run: |
+          mkdir -p evidence
+          git rev-parse HEAD > evidence/source-sha.txt
+          git diff > evidence/diagnostic-only.diff
+          mvn -version > evidence/maven-version.txt
+          cat "$JAVA_HOME/release" > evidence/jdk-release.txt
+          args=(-B -ntp -e clean verify -Ptest-on-javase-27 -Pbree-libs -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false)
+          if [ "$MODE" = full ]; then
+            args+=(-Papi-check -Pjavadoc -Dcompare-version-with-baselines.skip=false)
+          else
+            args+=(-pl org.eclipse.jdt.debug.tests -am -Dtest=BreakpointHardeningDiagnosticSuite -DfailIfNoTests=true -Dsurefire.timeout=300)
+          fi
+          set +e
+          xvfb-run -a mvn "${args[@]}" > evidence/maven.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/exit-code.txt
+          tail -n 160 evidence/maven.log
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET, shutil, json
+          out=pathlib.Path('evidence'); cases=[]; totals={'tests':0,'failures':0,'errors':0,'skipped':0}
+          for p in pathlib.Path('.').glob('*/target/surefire-reports/TEST-*.xml'):
+              shutil.copy(p,out/p.name)
+              root=ET.parse(p).getroot()
+              for k in totals: totals[k]+=int(root.attrib.get(k,0))
+              for c in root.iter('testcase'):
+                  f=c.find('failure'); f=f if f is not None else c.find('error')
+                  cases.append({'class':c.attrib.get('classname'),'name':c.attrib['name'],'failure':None if f is None else f.attrib.get('message','')})
+          for i,p in enumerate(pathlib.Path('.').glob('*/target/work/data/.metadata/.log')): shutil.copy(p,out/f'eclipse-{i}.log')
+          for i,p in enumerate(pathlib.Path('.').glob('*/target/compilelogs/*.xml')): shutil.copy(p,out/f'compile-{i}.xml')
+          result={'totals':totals,'cases':cases}; (out/'test-results.json').write_text(json.dumps(result,indent=2)); print(json.dumps(totals))
+          assert totals['tests']>0, 'No tests executed'
+          failures=[c for c in cases if c['failure'] is not None]
+          code=int((out/'exit-code.txt').read_text())
+          if os.environ['MODE']=='without-target-finally':
+              assert len(failures)==1, failures
+              assert failures[0]['name']=='testCleanupContinuesAfterRequestDeregistrationFailure',failures
+              assert 'Target reference survived failed removal' in failures[0]['failure'],failures
+              assert code!=0
+          else:
+              assert not failures,failures
+              assert code==0,code
+              hardening=[c for c in cases if c['class'] and c['class'].endswith('BreakpointRemovalTests')]
+              assert len(hardening)==4,hardening
+          PY
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr990-hardening-${{ matrix.mode }}
+          path: evidence/
+          retention-days: 14
