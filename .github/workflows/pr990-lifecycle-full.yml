@@ -1,0 +1,104 @@
+name: PR 990 full lifecycle verification
+on:
+  push:
+    branches: [qa/pr990-lifecycle-20261009]
+    paths: [.github/workflows/pr990-lifecycle-full.yml]
+permissions:
+  contents: read
+jobs:
+  full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cc798f3cbcde41b83ea674b12e635a0e170551c1
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            11
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-11
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - name: Provide the runtime inventory required by existing tests
+        run: |
+          echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+          sudo mkdir -p /opt/tools/java/openjdk
+          sudo ln -s "$JAVA_HOME_11_X64" /opt/tools/java/openjdk/jdk-11
+          sudo ln -s "$JAVA_HOME_17_X64" /opt/tools/java/openjdk/jdk-17
+          sudo ln -s "$JAVA_HOME_21_X64" /opt/tools/java/openjdk/jdk-21
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+          cache: maven
+      - name: Pin diagnostic Maven and prepare display
+        run: |
+          url=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+          curl -fsSL --retry 2 "$url" -o "$RUNNER_TEMP/maven.tar.gz"
+          curl -fsSL --retry 2 "$url.sha512" -o "$RUNNER_TEMP/maven.sha512"
+          echo "$(cat "$RUNNER_TEMP/maven.sha512")  $RUNNER_TEMP/maven.tar.gz" | sha512sum -c -
+          tar xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2t64
+      - name: Full reactor and all default test suites without exclusions
+        run: |
+          mkdir -p evidence
+          git rev-parse HEAD HEAD^{tree} > evidence/revision.txt
+          test "$(git rev-parse HEAD^{tree})" = 56e23589dfb2af261ecb84ee116cd7edaa6cf6ab
+          git status --porcelain > evidence/source-status.txt
+          mvn -version > evidence/maven-version.txt
+          java -version 2> evidence/java-version.txt
+          cat ~/.m2/toolchains.xml > evidence/toolchains.xml
+          set +e
+          xvfb-run -a mvn -B -ntp -e --fail-at-end clean verify -Ptest-on-javase-27 -Pbree-libs -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false > evidence/maven.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/exit-code.txt
+          tail -n 140 evidence/maven.log
+          python3 - <<'PY'
+          import json,pathlib,shutil,xml.etree.ElementTree as ET
+          out=pathlib.Path('evidence'); reports=[]; failures=[]; totals=dict(tests=0,failures=0,errors=0,skipped=0); names=set()
+          for p in pathlib.Path('.').glob('*/target/surefire-reports/TEST-*.xml'):
+              dest=out/p.parts[0];dest.mkdir(exist_ok=True);shutil.copy(p,dest/p.name)
+              root=ET.parse(p).getroot()
+              info={k:int(root.get(k,0)) for k in totals}; info.update(module=p.parts[0],name=root.get('name'),time=root.get('time'))
+              reports.append(info)
+              for k in totals: totals[k]+=info[k]
+              for c in root.iter('testcase'):
+                  names.add(c.get('name'))
+                  for kind in ('failure','error'):
+                      f=c.find(kind)
+                      if f is not None: failures.append(dict(module=p.parts[0],test=c.attrib,kind=kind,message=f.get('message'),trace=f.text))
+          for i,p in enumerate(pathlib.Path('.').glob('*/target/work/data/.metadata/.log')): shutil.copy(p,out/f'eclipse-{i}.log')
+          for i,p in enumerate(pathlib.Path('.').glob('*/target/compilelogs/*.xml')): shutil.copy(p,out/f'compile-{i}.xml')
+          result=dict(totals=totals,reports=reports,failures=failures)
+          (out/'tests.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
+          assert int((out/'exit-code.txt').read_text())==0,'Maven verification failed; inspect evidence/maven.log'
+          assert totals['tests']>1000 and totals['errors']==0 and totals['failures']==0,totals
+          assert {'testCleanupContinuesAfterRequestDeregistrationFailure','testRemovalPreservesFailureWhenChangeNotificationFails','testFailedStartupTerminatesRealJavaProcess'}<=names,names
+          assert any(r['module']=='org.eclipse.jdt.debug.jdi.tests' for r in reports),reports
+          for p in out.glob('compile-*.xml'):
+              for s in ET.parse(p).getroot().iter('source'):
+                  if s.get('path','').endswith(('JavaBreakpoint.java','BreakpointRemovalTests.java')):
+                      assert not list(s.iter('problem')),s.attrib
+          PY
+      - name: Archive complete verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr990-lifecycle-full
+          path: evidence/
+          retention-days: 14
