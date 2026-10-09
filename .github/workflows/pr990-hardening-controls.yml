@@ -1,0 +1,122 @@
+name: PR 990 focused verification and negative control
+on:
+  push:
+    branches: [qa/pr-990-hardening-20261009]
+    paths: [.github/workflows/pr990-hardening-controls.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [focused, without-target-finally]
+    name: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: e0a02568eca126a842dd6a5834bb5ad787368eaf
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - run: echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+          cache: maven
+      - name: Pin Maven and prepare display
+        run: |
+          url=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+          curl -fsSL --retry 2 "$url" -o "$RUNNER_TEMP/maven.tar.gz"
+          curl -fsSL --retry 2 "$url.sha512" -o "$RUNNER_TEMP/maven.sha512"
+          echo "$(cat "$RUNNER_TEMP/maven.sha512")  $RUNNER_TEMP/maven.tar.gz" | sha512sum -c -
+          tar xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2t64
+      - name: Configure test-thread wrapper and optional negative control
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          if [ "$MODE" = without-target-finally ]; then
+            git fetch --depth=1 origin 2df0ceb03e8756c89bf4b59a6b32f7941440cd90
+            git show 2df0ceb03e8756c89bf4b59a6b32f7941440cd90:org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIDebugTarget.java > org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/model/JDIDebugTarget.java
+          fi
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          negative=os.environ['MODE']=='without-target-finally'
+          imports='import junit.framework.Test;\nimport org.eclipse.jdt.debug.tests.breakpoints.BreakpointRemovalTests;\n'
+          if negative:
+              body='addTest(new BreakpointRemovalTests("testCleanupContinuesAfterRequestDeregistrationFailure"));'
+          else:
+              imports+='import junit.framework.TestSuite;\nimport org.eclipse.jdt.debug.tests.breakpoints.BreakpointListenerTests;\nimport org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests;\n'
+              body='addTest(new TestSuite(BreakpointRemovalTests.class)); addTest(new TestSuite(BreakpointListenerTests.class)); addTest(new TestSuite(JavaBreakpointListenerTests.class));'
+          Path('org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/BreakpointHardeningDiagnosticSuite.java').write_text('package org.eclipse.jdt.debug.tests;\n'+imports+'public class BreakpointHardeningDiagnosticSuite extends DebugSuite {\n public static Test suite() { return new BreakpointHardeningDiagnosticSuite(); }\n public BreakpointHardeningDiagnosticSuite() { '+body+' }\n}\n')
+          PY
+      - name: Run and verify actual test cases
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          mkdir -p evidence
+          git rev-parse HEAD HEAD^{tree} > evidence/revision.txt
+          git diff > evidence/negative-control.diff
+          mvn -version > evidence/maven-version.txt
+          set +e
+          xvfb-run -a mvn -B -ntp -e clean verify -pl org.eclipse.jdt.debug.tests -am -Ptest-on-javase-27 -Pbree-libs -Dtest=BreakpointHardeningDiagnosticSuite -DfailIfNoTests=true -Dsurefire.timeout=300 -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false > evidence/maven.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/exit-code.txt
+          tail -n 80 evidence/maven.log
+          python3 - <<'PY'
+          import pathlib,xml.etree.ElementTree as ET,json,shutil,os
+          out=pathlib.Path('evidence'); cases={}; totals={'tests':0,'failures':0,'errors':0,'skipped':0}
+          for p in pathlib.Path('.').glob('*/target/surefire-reports/TEST-*.xml'):
+              shutil.copy(p,out/p.name); root=ET.parse(p).getroot()
+              for k in totals: totals[k]+=int(root.attrib.get(k,0))
+              for c in root.iter('testcase'):
+                  f=c.find('failure');f=f if f is not None else c.find('error')
+                  assert c.attrib['name'] not in cases, 'Duplicate test name'
+                  cases[c.attrib['name']]=None if f is None else f.attrib.get('message','')
+          for i,p in enumerate(pathlib.Path('.').glob('*/target/work/data/.metadata/.log')): shutil.copy(p,out/f'eclipse-{i}.log')
+          for i,p in enumerate(pathlib.Path('.').glob('*/target/compilelogs/*.xml')): shutil.copy(p,out/f'compile-{i}.xml')
+          result={'totals':totals,'cases':cases};(out/'test-results.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
+          code=int((out/'exit-code.txt').read_text())
+          if os.environ['MODE']=='without-target-finally':
+              assert totals['tests']==1,totals
+              assert 'Target reference survived failed removal' in cases['testCleanupContinuesAfterRequestDeregistrationFailure'],cases
+              assert code!=0
+          else:
+              expected={'testClassPrepareBreakpointRemovalAfterMarkerIsDetached','testMarkerDeletionCleansTargetAndAllowsReplacementBreakpoint','testCleanupContinuesAfterRequestDeregistrationFailure','testLineBreakpointRemovalAfterMarkerIsDetached'}
+              assert expected<=cases.keys(),cases
+              assert totals=={'tests':37,'failures':0,'errors':0,'skipped':0},totals
+              assert all(v is None for v in cases.values()),cases
+              assert code==0
+              changed=('BreakpointRemovalTests.java','GlobalBreakpointListener.java','VMStartupCleanupTest.java')
+              for p in out.glob('compile-*.xml'):
+                  for source in ET.parse(p).getroot().iter('source'):
+                      if source.attrib.get('path','').endswith(changed):
+                          assert not list(source.iter('problem')),source.attrib
+          PY
+      - name: Archive evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr990-controls-${{ matrix.mode }}
+          path: evidence/
+          retention-days: 14
