@@ -30,6 +30,16 @@ jobs:
           distribution: oracle-openjdk
           java-version: '27'
           mvn-toolchain-id: JavaSE-27
+          cache: maven
+      - name: Pin Maven used by the successful September diagnosis
+        run: |
+          mvn -version
+          url=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+          curl -fsSL --retry 2 "$url" -o "$RUNNER_TEMP/maven.tar.gz"
+          curl -fsSL --retry 2 "$url.sha512" -o "$RUNNER_TEMP/maven.sha512"
+          echo "$(cat "$RUNNER_TEMP/maven.sha512")  $RUNNER_TEMP/maven.tar.gz" | sha512sum -c -
+          tar xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
       - name: Add worker-thread diagnostic suite
         run: |
           cat > org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/BreakpointHardeningDiagnosticSuite.java <<'JAVA'
@@ -48,8 +58,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p evidence
+          mvn -version | tee evidence/maven-version.txt
           set +e
-          xvfb-run -a mvn -B -ntp clean verify -pl org.eclipse.jdt.debug.tests -am -Ptest-on-javase-27 -Pbree-libs -Dtest=BreakpointHardeningDiagnosticSuite -DfailIfNoTests=true -Dsurefire.timeout=240 -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false > evidence/maven.log 2>&1
+          xvfb-run -a mvn -B -ntp -e clean verify -pl org.eclipse.jdt.debug.tests -am -Ptest-on-javase-27 -Pbree-libs -Dtest=BreakpointHardeningDiagnosticSuite -DfailIfNoTests=true -Dsurefire.timeout=240 -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false > evidence/maven.log 2>&1
           code=$?
           set -e
           echo "$code" > evidence/exit-code.txt
