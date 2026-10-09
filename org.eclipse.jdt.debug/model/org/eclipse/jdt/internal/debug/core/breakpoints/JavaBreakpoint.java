@@ -787,6 +787,7 @@ public abstract class JavaBreakpoint extends Breakpoint implements IJavaBreakpoi
 		// ConcurrentModificationException
 		Iterator<EventRequest> iter = requests.iterator();
 		EventRequest req;
+		CoreException failure = null;
 		while (iter.hasNext()) {
 			req = iter.next();
 			try {
@@ -804,10 +805,22 @@ public abstract class JavaBreakpoint extends Breakpoint implements IJavaBreakpoi
 			} catch (RuntimeException e) {
 				target.internalError(e);
 			} finally {
-				deregisterRequest(req, target);
+				try {
+					deregisterRequest(req, target);
+				} catch (CoreException e) {
+					// A marker update failure must not leave the other VM requests active.
+					if (failure == null) {
+						failure = e;
+					} else if (failure != e) {
+						failure.addSuppressed(e);
+					}
+				}
 			}
 		}
 		fRequestsByTarget.remove(target);
+		if (failure != null) {
+			throw failure;
+		}
 	}
 
 	/**

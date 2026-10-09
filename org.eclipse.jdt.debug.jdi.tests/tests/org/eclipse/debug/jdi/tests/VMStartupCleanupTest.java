@@ -376,7 +376,7 @@ public class VMStartupCleanupTest extends TestCase {
 				throw attachFailure;
 			}
 			fVM = (VirtualMachine) Proxy.newProxyInstance(VirtualMachine.class.getClassLoader(),
-					new Class<?>[] { VirtualMachine.class }, (proxy, method, args) -> {
+					new Class<?>[] { VirtualMachine.class }, (_, method, _) -> {
 						if (method.getName().equals("exit")) {
 							return null;
 						}
