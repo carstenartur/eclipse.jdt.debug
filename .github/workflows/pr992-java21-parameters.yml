@@ -1,0 +1,132 @@
+name: PR 992 Java 21 compatibility
+on:
+  push:
+    branches: [qa/pr992-java21-parameters-20261009]
+    paths: [.github/workflows/pr992-java21-parameters.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      BAD_REVISION: 76680156e89c8f1807645b7434b02e0d0c7256ab
+      FIXED_REVISION: abe5f9f277fd5dcd355c67b424a1771717f2b53b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 76680156e89c8f1807645b7434b02e0d0c7256ab
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - name: Preserve non-modular runtime
+        run: echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+      - name: Pin Maven and check project source level
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 2 --max-time 90 https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz -o "$RUNNER_TEMP/maven.tar.gz"
+          tar -xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+          mkdir -p evidence
+          java -version 2>&1 | tee evidence/java-version.txt
+          grep -E 'compiler.(source|compliance)=21|compiler.problem.enablePreviewFeatures=disabled' org.eclipse.jdt.debug.jdi.tests/.settings/org.eclipse.jdt.core.prefs | tee evidence/source-level.txt
+          test "$(wc -l < evidence/source-level.txt)" -eq 3
+      - name: Verify original failure using the complete JDI compilation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -version | tee evidence/maven-version.txt
+          set +e
+          mvn -B -ntp -e clean test-compile -pl org.eclipse.jdt.debug.jdi.tests -am -Ptest-on-javase-27 -Pbree-libs > evidence/before-compile.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/before-exit.txt
+          tail -n 75 evidence/before-compile.log
+          test "$code" -ne 0
+          grep -F 'VMStartupCleanupTest.java' evidence/before-compile.log
+          grep -E "Duplicate parameter _|'_' is a keyword|unnamed variables are a preview" evidence/before-compile.log
+          cp -r org.eclipse.jdt.debug.jdi.tests/target/compilelogs evidence/before-compilelogs
+      - name: Check exact one-line correction and unchanged configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$FIXED_REVISION"
+          git diff "$BAD_REVISION" "$FIXED_REVISION" -- > evidence/correction.diff
+          cat evidence/correction.diff
+          test "$(git diff --name-only "$BAD_REVISION" "$FIXED_REVISION")" = 'org.eclipse.jdt.debug.jdi.tests/tests/org/eclipse/debug/jdi/tests/VMStartupCleanupTest.java'
+          test "$(git rev-parse "$BAD_REVISION^1")" = "$(git rev-parse "$FIXED_REVISION^1")"
+          test "$(git rev-parse HEAD^{tree})" = a4224b64064e2cae9e5fd63db5307c1249c62840
+      - name: Compile and run every test in the JDI suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          mvn -B -ntp -e clean verify -pl org.eclipse.jdt.debug.jdi.tests -am -Ptest-on-javase-27 -Pbree-libs -Papi-check -Pjavadoc -Dmaven.test.failure.ignore=false -Dcompare-version-with-baselines.skip=false -DtrimStackTrace=false > evidence/after-verify.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/after-exit.txt
+          tail -n 100 evidence/after-verify.log
+          test "$code" -eq 0
+      - name: Validate actual JDI tests and compiler diagnostics
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          module=Path('org.eclipse.jdt.debug.jdi.tests')
+          reports=list((module/'target/surefire-reports').glob('TEST-*.xml'))
+          assert reports, 'JDI tests did not execute'
+          cases=[]
+          for report in reports:
+              cases.extend(ET.parse(report).getroot().iter('testcase'))
+          failed=[c.attrib for c in cases if c.find('failure') is not None or c.find('error') is not None]
+          skipped=[c.attrib for c in cases if c.find('skipped') is not None]
+          assert len(cases)>=276, ('Unexpectedly few JDI tests',len(cases))
+          assert not failed and not skipped, (failed,skipped)
+          names=[c.attrib.get('name','') for c in cases]
+          for required in ['testFailedStartupTerminatesRealJavaProcess','testPeerThatDoesNotCompleteHandshakeCannotBlockStartup','testHandshakeTimeoutReachesCleanupAndRetainsDiagnostics']:
+              assert required in names, ('Missing regression test',required)
+          diagnostics=[]
+          seen=False
+          for report in (module/'target/compilelogs').glob('*.xml'):
+              for source in ET.parse(report).getroot().iter('source'):
+                  if str(source.attrib).find('VMStartupCleanupTest.java')<0:
+                      continue
+                  seen=True
+                  diagnostics.extend(ET.tostring(p,encoding='unicode') for p in source.iter('problem'))
+          assert seen, 'No compiler report for corrected test file'
+          assert not diagnostics, diagnostics
+          result={'revision':'abe5f9f277fd5dcd355c67b424a1771717f2b53b','jdi_tests':len(cases),'failures':len(failed),'skipped':len(skipped),'corrected_file_diagnostics':diagnostics,'source_level':21,'preview':False}
+          print(json.dumps(result,indent=2))
+          Path('evidence/verification.json').write_text(json.dumps(result,indent=2))
+          PY
+      - name: Preserve logs and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr992-java21-verification
+          path: |
+            evidence/
+            org.eclipse.jdt.debug.jdi.tests/target/surefire-reports/
+            org.eclipse.jdt.debug.jdi.tests/target/compilelogs/
+            org.eclipse.jdt.debug/target/compilelogs/
+          retention-days: 14
