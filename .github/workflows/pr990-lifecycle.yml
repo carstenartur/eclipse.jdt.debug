@@ -1,0 +1,175 @@
+name: PR 990 removal lifecycle verification
+on:
+  push:
+    branches: [qa/pr990-lifecycle-20261009]
+    paths:
+      - .github/workflows/pr990-lifecycle.yml
+      - .github/qa/pr990-lifecycle-*.patch
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    outputs:
+      mode: ${{ steps.prepare.outputs.mode }}
+      tree: ${{ steps.prepare.outputs.tree }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: diagnostics
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: f971f9c17c98ab0b12e71097e146f0b21e33586e
+          fetch-depth: 0
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - run: echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+          cache: maven
+      - name: Pin diagnostic Maven and install display dependencies
+        run: |
+          url=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+          curl -fsSL --retry 2 "$url" -o "$RUNNER_TEMP/maven.tar.gz"
+          curl -fsSL --retry 2 "$url.sha512" -o "$RUNNER_TEMP/maven.sha512"
+          echo "$(cat "$RUNNER_TEMP/maven.sha512")  $RUNNER_TEMP/maven.tar.gz" | sha512sum -c -
+          tar xzf "$RUNNER_TEMP/maven.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2t64
+      - name: Apply test-first patch and optional fix
+        id: prepare
+        run: |
+          mkdir -p evidence
+          git -C source apply --check ../diagnostics/.github/qa/pr990-lifecycle-tests.patch
+          git -C source apply ../diagnostics/.github/qa/pr990-lifecycle-tests.patch
+          mode=red
+          if [ -f diagnostics/.github/qa/pr990-lifecycle-fix.patch ]; then
+            git -C source apply --check ../diagnostics/.github/qa/pr990-lifecycle-fix.patch
+            git -C source apply ../diagnostics/.github/qa/pr990-lifecycle-fix.patch
+            mode=green
+          fi
+          git -C source diff --check
+          git -C source diff > evidence/source.patch
+          git -C source add org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/JavaBreakpoint.java org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/BreakpointRemovalTests.java
+          tree=$(git -C source write-tree)
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "$mode" > evidence/mode.txt
+          echo "$tree" > evidence/tree.txt
+          cat > source/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/BreakpointLifecycleDiagnosticSuite.java <<'JAVA'
+          package org.eclipse.jdt.debug.tests;
+          import junit.framework.Test;
+          import junit.framework.TestSuite;
+          import org.eclipse.jdt.debug.tests.breakpoints.BreakpointRemovalTests;
+          import org.eclipse.jdt.debug.tests.breakpoints.BreakpointListenerTests;
+          import org.eclipse.jdt.debug.tests.breakpoints.JavaBreakpointListenerTests;
+          public class BreakpointLifecycleDiagnosticSuite extends DebugSuite {
+              public static Test suite() { return new BreakpointLifecycleDiagnosticSuite(); }
+              public BreakpointLifecycleDiagnosticSuite() {
+                  addTest(new TestSuite(BreakpointRemovalTests.class));
+                  addTest(new TestSuite(BreakpointListenerTests.class));
+                  addTest(new TestSuite(JavaBreakpointListenerTests.class));
+              }
+          }
+          JAVA
+      - name: Execute real VM tests and inspect exact failures
+        env:
+          MODE: ${{ steps.prepare.outputs.mode }}
+        run: |
+          mvn -version > evidence/maven-version.txt
+          java -version 2> evidence/java-version.txt
+          set +e
+          (cd source && xvfb-run -a mvn -B -ntp -e clean verify -pl org.eclipse.jdt.debug.tests -am -Ptest-on-javase-27 -Pbree-libs -Dtest=BreakpointLifecycleDiagnosticSuite -DfailIfNoTests=true -Dsurefire.timeout=300 -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false) > evidence/maven.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/exit-code.txt
+          tail -n 90 evidence/maven.log
+          python3 - <<'PY'
+          import json,os,pathlib,shutil,xml.etree.ElementTree as ET
+          out=pathlib.Path('evidence'); cases={}; totals=dict(tests=0,failures=0,errors=0,skipped=0)
+          for p in pathlib.Path('source').glob('*/target/surefire-reports/TEST-*.xml'):
+              shutil.copy(p,out/p.name); root=ET.parse(p).getroot()
+              for k in totals: totals[k]+=int(root.get(k,0))
+              for c in root.iter('testcase'):
+                  f=c.find('failure')
+                  if f is None: f=c.find('error')
+                  assert c.get('name') not in cases, 'duplicate test name'
+                  cases[c.get('name')]=None if f is None else f.get('message','')
+          for i,p in enumerate(pathlib.Path('source').glob('*/target/work/data/.metadata/.log')): shutil.copy(p,out/f'eclipse-{i}.log')
+          for i,p in enumerate(pathlib.Path('source').glob('*/target/compilelogs/*.xml')): shutil.copy(p,out/f'compile-{i}.xml')
+          result={'totals':totals,'cases':cases};(out/'tests.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
+          names={'testCleanupContinuesAfterRequestDeregistrationFailure','testRemovalPreservesFailureWhenChangeNotificationFails'}
+          assert names<=cases.keys(),cases
+          code=int((out/'exit-code.txt').read_text())
+          if os.environ['MODE']=='red':
+              assert code!=0 and totals['tests']==38,totals
+              assert {n for n,f in cases.items() if f is not None}==names,cases
+              for n in names: assert 'Breakpoint retained its installed target' in cases[n],cases[n]
+          else:
+              assert code==0 and totals==dict(tests=38,failures=0,errors=0,skipped=0),totals
+              assert all(f is None for f in cases.values()),cases
+              for p in out.glob('compile-*.xml'):
+                  for s in ET.parse(p).getroot().iter('source'):
+                      if s.get('path','').endswith(('JavaBreakpoint.java','BreakpointRemovalTests.java')):
+                          assert not list(s.iter('problem')),s.attrib
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr990-lifecycle-focused-${{ steps.prepare.outputs.mode }}
+          path: evidence/
+          retention-days: 14
+  candidate:
+    needs: focused
+    if: needs.focused.outputs.mode == 'green'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.publish.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: diagnostics
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: f971f9c17c98ab0b12e71097e146f0b21e33586e
+          fetch-depth: 0
+          path: source
+      - name: Publish only the verified product and test files to an isolated branch
+        id: publish
+        env:
+          VERIFIED_TREE: ${{ needs.focused.outputs.tree }}
+        run: |
+          git -C source apply ../diagnostics/.github/qa/pr990-lifecycle-tests.patch
+          git -C source apply ../diagnostics/.github/qa/pr990-lifecycle-fix.patch
+          git -C source add org.eclipse.jdt.debug/model/org/eclipse/jdt/internal/debug/core/breakpoints/JavaBreakpoint.java org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/BreakpointRemovalTests.java
+          test "$(git -C source write-tree)" = "$VERIFIED_TREE"
+          git -C source config user.name 'Carsten Hammer'
+          git -C source config user.email 'carsten.hammer@t-online.de'
+          git -C source commit --amend --no-edit
+          branch=qa/pr990-lifecycle-candidate-20261009
+          previous=$(git -C source ls-remote origin "refs/heads/$branch" | cut -f1)
+          git -C source push --force-with-lease="refs/heads/$branch:$previous" origin "HEAD:refs/heads/$branch"
+          echo "sha=$(git -C source rev-parse HEAD)" >> "$GITHUB_OUTPUT"
