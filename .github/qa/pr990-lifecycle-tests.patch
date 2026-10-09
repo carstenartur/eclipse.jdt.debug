@@ -1,0 +1,144 @@
+diff --git a/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/BreakpointRemovalTests.java b/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/BreakpointRemovalTests.java
+index ed9e93f..e1c848e 100644
+--- a/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/BreakpointRemovalTests.java
++++ b/org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/breakpoints/BreakpointRemovalTests.java
+@@ -35,6 +35,7 @@ import org.eclipse.jdt.debug.core.IJavaBreakpoint;
+ import org.eclipse.jdt.debug.core.IJavaBreakpointListener;
+ import org.eclipse.jdt.debug.core.IJavaClassPrepareBreakpoint;
+ import org.eclipse.jdt.debug.core.IJavaLineBreakpoint;
++import org.eclipse.jdt.debug.core.IJavaObject;
+ import org.eclipse.jdt.debug.core.IJavaThread;
+ import org.eclipse.jdt.debug.core.JDIDebugModel;
+ import org.eclipse.jdt.debug.testplugin.EvalualtionBreakpointListener;
+@@ -49,7 +50,8 @@ import com.sun.jdi.request.EventRequestManager;
+ 
+ /**
+  * Tests marker-independent breakpoint removal and cleanup after a request
+- * deregistration failure, including target/thread state and real VM requests.
++ * deregistration failure, including both sides of the installation, target
++ * filters, listener notifications and real VM requests.
+  */
+ public class BreakpointRemovalTests extends AbstractDebugTest {
+ 
+@@ -180,10 +182,20 @@ public class BreakpointRemovalTests extends AbstractDebugTest {
+ 
+ 	/**
+ 	 * A marker update failure while deregistering one request must not leave
+-	 * subsequent requests active in the VM. The target must still clear its
+-	 * references and report the original failure rather than hide it.
++	 * subsequent requests active in the VM. Both the target and the breakpoint
++	 * must release their per-target state and notify removal, so the same
++	 * breakpoint can be installed and hit again.
+ 	 */
+ 	public void testCleanupContinuesAfterRequestDeregistrationFailure() throws Exception {
++		assertCleanupContinuesAfterRequestDeregistrationFailure(false);
++	}
++
++	/** A later notification failure must not hide the original removal failure. */
++	public void testRemovalPreservesFailureWhenChangeNotificationFails() throws Exception {
++		assertCleanupContinuesAfterRequestDeregistrationFailure(true);
++	}
++
++	private void assertCleanupContinuesAfterRequestDeregistrationFailure(boolean failChangeNotification) throws Exception {
+ 		String typeName = "HitCountLooper"; //$NON-NLS-1$
+ 		FailingLineBreakpoint breakpoint = new FailingLineBreakpoint(getType(typeName).getResource(), typeName);
+ 		getBreakpointManager().addBreakpoint(breakpoint);
+@@ -192,12 +204,24 @@ public class BreakpointRemovalTests extends AbstractDebugTest {
+ 			thread = launchToLineBreakpoint(typeName, breakpoint);
+ 			JDIDebugTarget target = (JDIDebugTarget) thread.getDebugTarget();
+ 			EventRequestManager manager = target.getEventRequestManager();
++			// Use the public filter API and real objects from the suspended VM.
++			// Two adjacent instance filters catch incomplete list removal as well.
++			breakpoint.setThreadFilter(thread);
++			breakpoint.addInstanceFilter(thread.getThreadObject());
++			breakpoint.addInstanceFilter((IJavaObject) target.newValue("cleanup filter")); //$NON-NLS-1$
++			assertSame(thread, breakpoint.getThreadFilter(target));
++			assertEquals(2, breakpoint.getInstanceFilters().length);
++			assertTrue("Breakpoint should remember its installed target", breakpoint.installedIn(target)); //$NON-NLS-1$
++			assertTrue("Initial install notification was not delivered", GlobalBreakpointListener.INSTALLED.contains(breakpoint)); //$NON-NLS-1$
++			GlobalBreakpointListener.REMOVED.remove(breakpoint);
+ 			breakpoint.addDuplicateRequest(target);
+ 			List<EventRequest> installedRequests = breakpoint.requestsIn(target);
+ 			assertTrue("Test needs multiple real JDI requests", installedRequests.size() >= 2); //$NON-NLS-1$
+ 			assertTrue("Breakpoint must be current before removal", containsByIdentity(thread.getBreakpoints(), breakpoint)); //$NON-NLS-1$
+ 
+ 			breakpoint.failuresRemaining = 2;
++			RuntimeException changeFailure = failChangeNotification ? new IllegalStateException("Injected change notification failure") : null; //$NON-NLS-1$
++			breakpoint.changeFailure = changeFailure;
+ 			try (RemovalLog log = new RemovalLog()) {
+ 				target.breakpointRemoved(breakpoint, null);
+ 				assertFalse("Target reference survived failed removal", containsByIdentity(target.getBreakpoints(), breakpoint)); //$NON-NLS-1$
+@@ -207,23 +231,41 @@ public class BreakpointRemovalTests extends AbstractDebugTest {
+ 					assertFalse("A class-prepare request survived failed removal", manager.classPrepareRequests().contains(request)); //$NON-NLS-1$
+ 				}
+ 				assertTrue("Breakpoint retained removed requests", breakpoint.requestsIn(target).isEmpty()); //$NON-NLS-1$
++				assertFalse("Breakpoint retained its installed target", breakpoint.installedIn(target)); //$NON-NLS-1$
++				assertNull("Breakpoint retained its thread filter", breakpoint.getThreadFilter(target)); //$NON-NLS-1$
++				assertEquals("Breakpoint retained instance filters", 0, breakpoint.getInstanceFilters().length); //$NON-NLS-1$
++				assertTrue("Removal notification was not delivered after deregistration failure", GlobalBreakpointListener.REMOVED.contains(breakpoint)); //$NON-NLS-1$
+ 				assertEquals("Cleanup stopped at the first failure", 2, breakpoint.failures.size()); //$NON-NLS-1$
+ 				CoreException firstFailure = breakpoint.failures.get(0);
+-				assertEquals("Additional failure was lost", 1, firstFailure.getSuppressed().length); //$NON-NLS-1$
++				assertEquals("Additional failure was lost", failChangeNotification ? 2 : 1, firstFailure.getSuppressed().length); //$NON-NLS-1$
+ 				assertSame(breakpoint.failures.get(1), firstFailure.getSuppressed()[0]);
++				if (failChangeNotification) {
++					assertSame(changeFailure, firstFailure.getSuppressed()[1]);
++				}
+ 				log.assertOnly(firstFailure);
+ 
+ 				// Repeated notifications must be harmless and must not repeat cleanup.
++				GlobalBreakpointListener.REMOVED.remove(breakpoint);
+ 				target.breakpointRemoved(breakpoint, null);
++				assertFalse("Repeated removal notified the listener again", GlobalBreakpointListener.REMOVED.contains(breakpoint)); //$NON-NLS-1$
+ 				log.assertOnly(firstFailure);
+-			}
+ 
+-			breakpoint.failuresRemaining = 0;
+-			IJavaLineBreakpoint replacement = createLineBreakpoint(19, typeName);
+-			thread = resumeToLineBreakpoint(thread, replacement);
+-			assertTrue("Replacement breakpoint was not hit", containsByIdentity(thread.getBreakpoints(), replacement)); //$NON-NLS-1$
++				// Reuse the same object: a fresh breakpoint cannot expose stale
++				// fInstalledTargets state suppressing the next install notification.
++				breakpoint.failuresRemaining = 0;
++				breakpoint.changeFailure = null;
++				GlobalBreakpointListener.INSTALLED.remove(breakpoint);
++				target.breakpointAdded(breakpoint);
++				assertTrue("The same breakpoint was not tracked again", containsByIdentity(target.getBreakpoints(), breakpoint)); //$NON-NLS-1$
++				assertTrue("The same breakpoint was not marked installed again", breakpoint.installedIn(target)); //$NON-NLS-1$
++				assertTrue("Reinstalling the same breakpoint did not notify the listener", GlobalBreakpointListener.INSTALLED.contains(breakpoint)); //$NON-NLS-1$
++				thread = resumeToLineBreakpoint(thread, breakpoint);
++				assertTrue("The same breakpoint was not hit after reinstallation", containsByIdentity(thread.getBreakpoints(), breakpoint)); //$NON-NLS-1$
++				log.assertOnly(firstFailure);
++			}
+ 		} finally {
+ 			breakpoint.failuresRemaining = 0;
++			breakpoint.changeFailure = null;
+ 			try {
+ 				terminateAndRemove(thread);
+ 			} finally {
+@@ -235,12 +277,25 @@ public class BreakpointRemovalTests extends AbstractDebugTest {
+ 	/** Injects a marker-update failure only after real request deregistration. */
+ 	private static final class FailingLineBreakpoint extends JavaLineBreakpoint {
+ 		int failuresRemaining;
++		RuntimeException changeFailure;
+ 		final List<CoreException> failures = new ArrayList<>();
+ 
+ 		FailingLineBreakpoint(IResource resource, String typeName) throws DebugException {
+ 			super(resource, typeName, 19, -1, -1, 0, false, new HashMap<>());
+ 		}
+ 
++		boolean installedIn(JDIDebugTarget target) {
++			return isInstalledIn(target);
++		}
++
++		@Override
++		protected void fireChanged() {
++			if (changeFailure != null) {
++				throw changeFailure;
++			}
++			super.fireChanged();
++		}
++
+ 		List<EventRequest> requestsIn(JDIDebugTarget target) {
+ 			return new ArrayList<>(getRequests(target));
+ 		}
