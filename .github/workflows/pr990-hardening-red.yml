@@ -1,0 +1,86 @@
+name: PR 990 hardening red tests
+on:
+  push:
+    branches: [qa/pr-990-hardening-20261009]
+    paths: [.github/workflows/pr990-hardening-red.yml]
+permissions:
+  contents: read
+jobs:
+  verify-red:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            17
+            21
+            25
+          mvn-toolchain-id: |
+            JavaSE-1.8
+            JavaSE-17
+            JavaSE-21
+            JavaSE-25
+      - run: echo "NON_MODULAR_JAVA_HOME=$JAVA_HOME_8_X64" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: oracle-openjdk
+          java-version: '27'
+          mvn-toolchain-id: JavaSE-27
+      - name: Add worker-thread diagnostic suite
+        run: |
+          cat > org.eclipse.jdt.debug.tests/tests/org/eclipse/jdt/debug/tests/BreakpointHardeningDiagnosticSuite.java <<'JAVA'
+          package org.eclipse.jdt.debug.tests;
+          import junit.framework.Test;
+          import junit.framework.TestSuite;
+          import org.eclipse.jdt.debug.tests.breakpoints.BreakpointRemovalTests;
+          public class BreakpointHardeningDiagnosticSuite extends DebugSuite {
+              public static Test suite() { return new BreakpointHardeningDiagnosticSuite(); }
+              public BreakpointHardeningDiagnosticSuite() { addTest(new TestSuite(BreakpointRemovalTests.class)); }
+          }
+          JAVA
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgtk-3-0 libasound2t64
+      - name: Run and assert the specific expected failures
+        shell: bash
+        run: |
+          mkdir -p evidence
+          set +e
+          xvfb-run -a mvn -B -ntp clean verify -pl org.eclipse.jdt.debug.tests -am -Ptest-on-javase-27 -Pbree-libs -Dtest=BreakpointHardeningDiagnosticSuite -DfailIfNoTests=true -Dsurefire.timeout=240 -Dmaven.test.failure.ignore=false -DDetectVMInstallationsJob.disabled=true -DtrimStackTrace=false > evidence/maven.log 2>&1
+          code=$?
+          set -e
+          echo "$code" > evidence/exit-code.txt
+          tail -n 160 evidence/maven.log
+          python3 - <<'PY'
+          import pathlib, xml.etree.ElementTree as ET, shutil, json
+          report_dir=pathlib.Path('org.eclipse.jdt.debug.tests/target/surefire-reports')
+          reports=list(report_dir.glob('TEST-*.xml'))
+          assert reports, 'No tests executed; build failure is not a red test'
+          cases={}
+          for p in reports:
+              shutil.copy(p, 'evidence/'+p.name)
+              for c in ET.parse(p).getroot().iter('testcase'):
+                  failure=c.find('failure'); error=c.find('error')
+                  f=failure if failure is not None else error
+                  cases[c.attrib['name']] = None if f is None else f.attrib.get('message','')
+          print(json.dumps(cases,indent=2))
+          expected={'testLineBreakpointRemovalAfterMarkerIsDetached','testClassPrepareBreakpointRemovalAfterMarkerIsDetached','testCleanupContinuesAfterRequestDeregistrationFailure'}
+          failed={name for name,message in cases.items() if message is not None}
+          assert failed==expected, (failed,cases)
+          for name in expected:
+              required='survived failed removal' if name.startswith('testCleanup') else 'Unexpected errors during breakpoint removal'
+              assert required in cases[name], (name,cases[name])
+          assert cases.get('testMarkerDeletionCleansTargetAndAllowsReplacementBreakpoint') is None
+          pathlib.Path('evidence/red-proof.json').write_text(json.dumps(cases,indent=2))
+          log=pathlib.Path('org.eclipse.jdt.debug.tests/target/work/data/.metadata/.log')
+          if log.exists(): shutil.copy(log,'evidence/eclipse.log')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr990-hardening-red
+          path: evidence/
+          retention-days: 14
