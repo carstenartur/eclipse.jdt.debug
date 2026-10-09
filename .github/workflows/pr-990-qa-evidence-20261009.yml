@@ -1,0 +1,47 @@
+name: PR 990 QA evidence
+on:
+  push:
+    branches: [diagnostics/pr-990-ci-20260929]
+    paths: [.github/workflows/pr-990-qa-evidence-20261009.yml]
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Collect public compiler annotations and exact sources
+        shell: bash
+        run: |
+          mkdir evidence
+          python3 - <<'PY'
+          import json, pathlib, urllib.request, urllib.error, uuid
+          url='https://api.github.com/repos/eclipse-jdt/eclipse.jdt.debug/check-runs/112872012054/annotations?per_page=100'
+          token=uuid.uuid4().hex
+          print('::stop-commands::'+token, flush=True)
+          try:
+              req=urllib.request.Request(url, headers={'Accept':'application/vnd.github+json','User-Agent':'JDT-PR-990-QA'})
+              with urllib.request.urlopen(req, timeout=25) as response:
+                  text=response.read().decode('utf-8')
+              data=json.loads(text)
+              pathlib.Path('evidence/compiler-annotations.json').write_text(json.dumps(data,indent=2))
+              print(json.dumps(data,indent=2),flush=True)
+          except (urllib.error.URLError, ValueError) as exc:
+              pathlib.Path('evidence/annotation-fetch-error.txt').write_text(str(exc))
+              print('ANNOTATION READ FAILED:', str(exc),flush=True)
+          print('::'+token+'::',flush=True)
+          PY
+          git init source
+          git -C source remote add origin https://github.com/carstenartur/eclipse.jdt.debug.git
+          git -C source fetch --depth=1 origin 965becce58c7d383a17aeec37e81f071d841410e 2df0ceb03e8756c89bf4b59a6b32f7941440cd90 accc33b0de7f08dca8e9e4ccba08442fb13adaf6
+          git -C source archive --format=tar.gz 965becce58c7d383a17aeec37e81f071d841410e > evidence/source-pr990.tar.gz
+          git -C source archive --format=tar.gz 2df0ceb03e8756c89bf4b59a6b32f7941440cd90 > evidence/source-base.tar.gz
+          git -C source diff 2df0ceb03e8756c89bf4b59a6b32f7941440cd90 accc33b0de7f08dca8e9e4ccba08442fb13adaf6 > evidence/infrastructure.diff
+          git -C source diff accc33b0de7f08dca8e9e4ccba08442fb13adaf6 965becce58c7d383a17aeec37e81f071d841410e > evidence/breakpoint.diff
+      - name: Save read-only QA evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pr990-qa-evidence-20261009
+          path: evidence/
+          retention-days: 14
